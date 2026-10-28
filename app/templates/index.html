@@ -1,0 +1,1215 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950 text-slate-100">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ app_name }}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.3/dist/cdn.min.js"></script>
+  <style>
+    [x-cloak] { display: none !important; }
+    .leaflet-popup-content-wrapper {
+      background: #0f172a;
+      color: #f8fafc;
+      border: 1px solid #334155;
+      border-radius: 0.75rem;
+    }
+    .leaflet-popup-tip {
+      background: #0f172a;
+    }
+    .custom-pin {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 9999px;
+      font-weight: 700;
+      font-size: 11px;
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+      border: 2px solid #ffffff;
+      padding: 2px 7px;
+      white-space: nowrap;
+      transition: transform 0.15s ease;
+    }
+    .custom-pin:hover {
+      transform: scale(1.12);
+      z-index: 1000 !important;
+    }
+  </style>
+</head>
+<body class="h-full flex flex-col overflow-hidden" x-data="dealDashboard()" x-init="init()">
+
+  <!-- Top Navigation & KPI Header -->
+  <header class="bg-slate-900/95 border-b border-slate-800 px-4 py-3 shrink-0 z-20">
+    <div class="max-w-[1920px] mx-auto flex flex-wrap items-center justify-between gap-3">
+      <!-- Brand -->
+      <div class="flex items-center gap-3">
+        <div class="h-10 w-10 rounded-xl bg-emerald-500/15 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold text-lg shadow-inner">
+          JX
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-base sm:text-lg font-bold tracking-tight text-white">
+              Jacksonville Foreclosure &amp; Tax Deed Finder
+            </h1>
+            <span class="hidden md:inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+              Duval County Live Desk
+            </span>
+          </div>
+          <p class="text-xs text-slate-400">
+            RealForeclose &bull; RealTaxDeed &bull; Duval Property Appraiser Equity Analyzer
+          </p>
+        </div>
+      </div>
+
+      <!-- KPI Strip -->
+      <div class="hidden xl:flex items-center gap-2 bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-1.5">
+        <div class="px-3 border-r border-slate-800">
+          <div class="text-[10px] uppercase tracking-wider text-slate-400">Active Deals</div>
+          <div class="text-sm font-bold text-white" x-text="listings.length + ' / ' + stats.total_listings"></div>
+        </div>
+        <div class="px-3 border-r border-slate-800">
+          <div class="text-[10px] uppercase tracking-wider text-slate-400">High Equity (&ge;30%)</div>
+          <div class="text-sm font-bold text-emerald-400" x-text="stats.high_equity_count"></div>
+        </div>
+        <div class="px-3 border-r border-slate-800">
+          <div class="text-[10px] uppercase tracking-wider text-slate-400">Avg Equity Margin</div>
+          <div class="text-sm font-bold text-amber-400" x-text="stats.avg_equity_pct + '%'"></div>
+        </div>
+        <div class="px-3 border-r border-slate-800">
+          <div class="text-[10px] uppercase tracking-wider text-slate-400">Total Gross Equity</div>
+          <div class="text-sm font-bold text-emerald-300" x-text="formatMoney(stats.total_equity_dollars)"></div>
+        </div>
+        <div class="px-3">
+          <div class="text-[10px] uppercase tracking-wider text-slate-400">Watchlist</div>
+          <div class="text-sm font-bold text-yellow-400" x-text="'★ ' + stats.starred_count"></div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex items-center gap-2">
+        <!-- View Switcher -->
+        <div class="inline-flex rounded-lg bg-slate-950 p-0.5 border border-slate-800 text-xs">
+          <button
+            @click="viewMode = 'split'"
+            :class="viewMode === 'split' ? 'bg-slate-800 text-white font-semibold' : 'text-slate-400 hover:text-slate-200'"
+            class="px-2.5 py-1.5 rounded-md transition"
+          >
+            Cards + Map
+          </button>
+          <button
+            @click="viewMode = 'table'"
+            :class="viewMode === 'table' ? 'bg-slate-800 text-white font-semibold' : 'text-slate-400 hover:text-slate-200'"
+            class="px-2.5 py-1.5 rounded-md transition"
+          >
+            Table
+          </button>
+          <button
+            @click="viewMode = 'zips'"
+            :class="viewMode === 'zips' ? 'bg-slate-800 text-white font-semibold' : 'text-slate-400 hover:text-slate-200'"
+            class="px-2.5 py-1.5 rounded-md transition"
+          >
+            ZIP Trends
+          </button>
+        </div>
+
+        <button
+          @click="showAddModal = true"
+          class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition"
+        >
+          + Add Deal
+        </button>
+
+        <button
+          @click="showSyncModal = true"
+          class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition flex items-center gap-1.5"
+        >
+          <span>&#8635;</span>
+          <span>Sync / Import CSV</span>
+        </button>
+
+        <a
+          href="/api/export.csv"
+          class="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-950 hover:bg-slate-800 text-slate-300 border border-slate-800 transition"
+          title="Download filtered deals as CSV"
+        >
+          Export CSV
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Filter Bar -->
+  <section class="bg-slate-900/60 border-b border-slate-800/80 px-4 py-2.5 shrink-0 z-10">
+    <div class="max-w-[1920px] mx-auto flex flex-wrap items-center gap-2.5 text-xs">
+      <!-- Search -->
+      <div class="relative flex-1 min-w-[210px] max-w-xs">
+        <input
+          type="text"
+          x-model.debounce.250ms="filters.search"
+          @input="fetchListings()"
+          placeholder="Search address, RE#, case #, neighborhood..."
+          class="w-full bg-slate-950 border border-slate-800 focus:border-emerald-500 rounded-lg pl-3 pr-8 py-1.5 text-slate-100 placeholder-slate-500 focus:outline-none"
+        />
+        <button
+          x-show="filters.search"
+          @click="filters.search = ''; fetchListings()"
+          class="absolute right-2.5 top-1.5 text-slate-500 hover:text-slate-300"
+        >
+          &times;
+        </button>
+      </div>
+
+      <!-- Listing Type -->
+      <div class="inline-flex rounded-lg bg-slate-950 p-0.5 border border-slate-800">
+        <button
+          @click="filters.listing_type = 'all'; fetchListings()"
+          :class="filters.listing_type === 'all' ? 'bg-slate-800 text-white font-semibold' : 'text-slate-400'"
+          class="px-2.5 py-1 rounded-md"
+        >
+          All (<span x-text="stats.total_listings"></span>)
+        </button>
+        <button
+          @click="filters.listing_type = 'Foreclosure'; fetchListings()"
+          :class="filters.listing_type === 'Foreclosure' ? 'bg-indigo-600/80 text-white font-semibold' : 'text-slate-400'"
+          class="px-2.5 py-1 rounded-md"
+        >
+          Foreclosures (<span x-text="stats.foreclosure_count"></span>)
+        </button>
+        <button
+          @click="filters.listing_type = 'Tax Deed'; fetchListings()"
+          :class="filters.listing_type === 'Tax Deed' ? 'bg-purple-600/80 text-white font-semibold' : 'text-slate-400'"
+          class="px-2.5 py-1 rounded-md"
+        >
+          Tax Deeds (<span x-text="stats.tax_deed_count"></span>)
+        </button>
+      </div>
+
+      <!-- ZIP Code -->
+      <select
+        x-model="filters.zip_code"
+        @change="fetchListings()"
+        class="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-emerald-500"
+      >
+        <option value="all">All Jacksonville ZIPs</option>
+        <template x-for="z in stats.zip_trends" :key="z.zip_code">
+          <option :value="z.zip_code" x-text="z.zip_code + ' — ' + z.neighborhood_name + ' (+' + z.yoy_appreciation_pct + '% YoY)'"></option>
+        </template>
+      </select>
+
+      <!-- Max Opening Bid -->
+      <select
+        x-model="filters.max_opening_bid"
+        @change="fetchListings()"
+        class="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-emerald-500"
+      >
+        <option value="">Max Opening Bid: Any</option>
+        <option value="125000">Under $125,000</option>
+        <option value="200000">Under $200,000</option>
+        <option value="275000">Under $275,000</option>
+        <option value="350000">Under $350,000</option>
+        <option value="500000">Under $500,000</option>
+      </select>
+
+      <!-- Min Equity % -->
+      <select
+        x-model="filters.min_equity_pct"
+        @change="fetchListings()"
+        class="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-emerald-500"
+      >
+        <option value="">Min Equity: Any</option>
+        <option value="20">&ge; 20% Equity</option>
+        <option value="30">&ge; 30% High Equity (Green)</option>
+        <option value="40">&ge; 40% Deep Discount</option>
+        <option value="50">&ge; 50% Massive Margin</option>
+      </select>
+
+      <!-- Sort By -->
+      <select
+        x-model="filters.sort_by"
+        @change="fetchListings()"
+        class="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-emerald-500"
+      >
+        <option value="equity_desc">Sort: Highest Equity %</option>
+        <option value="equity_dollars_desc">Sort: Highest Equity $</option>
+        <option value="bid_asc">Sort: Lowest Opening Bid</option>
+        <option value="date_asc">Sort: Soonest Auction Date</option>
+      </select>
+
+      <!-- Starred Toggle -->
+      <button
+        @click="filters.starred_only = !filters.starred_only; fetchListings()"
+        :class="filters.starred_only ? 'bg-yellow-500/20 text-yellow-300 border-yellow-500/50' : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200'"
+        class="px-3 py-1.5 rounded-lg border font-medium transition flex items-center gap-1"
+      >
+        <span>&#9733;</span>
+        <span>Watchlist Only</span>
+      </button>
+
+      <!-- Map ZIP Heat Layer Toggle -->
+      <button
+        @click="toggleZipOverlay()"
+        :class="showZipCircles ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200'"
+        class="px-3 py-1.5 rounded-lg border font-medium transition"
+      >
+        🔥 ZIP Growth Overlay
+      </button>
+
+      <button
+        @click="resetFilters()"
+        class="text-slate-400 hover:text-white underline ml-auto"
+      >
+        Reset
+      </button>
+    </div>
+  </section>
+
+  <!-- Toast Banner -->
+  <div
+    x-cloak
+    x-show="toastMessage"
+    x-transition
+    class="fixed bottom-5 right-5 z-50 bg-emerald-600 text-white px-4 py-2.5 rounded-xl shadow-2xl border border-emerald-400/40 text-xs font-semibold flex items-center gap-2"
+  >
+    <span x-text="toastMessage"></span>
+    <button @click="toastMessage = ''" class="text-white/80 hover:text-white">&times;</button>
+  </div>
+
+  <!-- Main Workspace -->
+  <main class="flex-1 flex overflow-hidden relative">
+
+    <!-- SPLIT VIEW: Left Deal Cards + Right Map -->
+    <div
+      x-show="viewMode === 'split'"
+      class="w-full lg:w-[52%] xl:w-[48%] h-full overflow-y-auto p-4 space-y-3 border-r border-slate-800 bg-slate-950"
+    >
+      <template x-if="listings.length === 0">
+        <div class="text-center py-16 bg-slate-900/40 rounded-2xl border border-slate-800 p-8">
+          <p class="text-slate-300 font-semibold text-sm">No Duval properties match the current filters.</p>
+          <p class="text-slate-500 text-xs mt-1">Try resetting filters or syncing the Duval County dataset.</p>
+          <button
+            @click="resetFilters()"
+            class="mt-4 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold"
+          >
+            Reset All Filters
+          </button>
+        </div>
+      </template>
+
+      <template x-for="deal in listings" :key="deal.id">
+        <div
+          @click="selectDeal(deal, true)"
+          :class="selectedDeal && selectedDeal.id === deal.id ? 'border-emerald-500 ring-1 ring-emerald-500/40 bg-slate-900' : 'border-slate-800/90 bg-slate-900/55 hover:bg-slate-900 hover:border-slate-700'"
+          class="rounded-xl border p-4 transition cursor-pointer shadow-sm"
+        >
+          <!-- Card Top Row -->
+          <div class="flex items-start justify-between gap-2">
+            <div class="flex flex-wrap items-center gap-1.5">
+              <span
+                :class="deal.listing_type === 'Tax Deed' ? 'bg-purple-500/20 text-purple-300 border-purple-500/40' : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40'"
+                class="px-2 py-0.5 rounded-md text-[11px] font-semibold border"
+                x-text="deal.listing_type"
+              ></span>
+              <span
+                class="px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-800 text-slate-300 border border-slate-700"
+                x-text="deal.status"
+              ></span>
+              <template x-if="deal.zip_yoy_pct">
+                <span
+                  class="px-2 py-0.5 rounded-md text-[11px] font-medium bg-amber-500/10 text-amber-300 border border-amber-500/30"
+                  x-text="'🔥 ZIP +' + deal.zip_yoy_pct + '% YoY'"
+                ></span>
+              </template>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <span class="text-[11px] text-slate-400 font-mono" x-text="'Auction: ' + (deal.auction_date || 'TBD')"></span>
+              <button
+                @click.stop="toggleStar(deal)"
+                :class="deal.is_starred ? 'text-yellow-400 scale-110' : 'text-slate-600 hover:text-slate-400'"
+                class="text-lg leading-none transition"
+                title="Toggle Watchlist Star"
+              >
+                &#9733;
+              </button>
+            </div>
+          </div>
+
+          <!-- Address & Neighborhood -->
+          <div class="mt-2 flex items-baseline justify-between gap-2">
+            <div>
+              <h3 class="text-sm sm:text-base font-bold text-white" x-text="deal.address"></h3>
+              <p class="text-xs text-slate-400">
+                <span class="text-slate-300 font-medium" x-text="deal.neighborhood"></span>
+                &bull; <span x-text="deal.city + ', FL ' + deal.zip_code"></span>
+                &bull; <span class="font-mono text-[11px] text-slate-400" x-text="'RE# ' + deal.parcel_id"></span>
+              </p>
+            </div>
+            <div class="text-right shrink-0">
+              <span
+                :class="equityBadgeClass(deal.estimated_equity_pct)"
+                class="inline-block px-2.5 py-1 rounded-lg text-xs font-extrabold border"
+                x-text="deal.estimated_equity_pct.toFixed(1) + '% Equity'"
+              ></span>
+            </div>
+          </div>
+
+          <!-- Financial Metrics Grid -->
+          <div class="mt-3 grid grid-cols-3 gap-2 bg-slate-950/90 rounded-lg p-2.5 border border-slate-800/80 text-xs">
+            <div>
+              <div class="text-[10px] uppercase text-slate-400">Opening Bid</div>
+              <div class="font-bold text-white text-sm" x-text="formatMoney(deal.opening_bid)"></div>
+            </div>
+            <div>
+              <div class="text-[10px] uppercase text-slate-400">Est. Market Value</div>
+              <div class="font-bold text-slate-200 text-sm" x-text="formatMoney(deal.estimated_market_value)"></div>
+            </div>
+            <div>
+              <div class="text-[10px] uppercase text-slate-400">Est. Gross Equity</div>
+              <div
+                :class="deal.estimated_equity_dollars >= 0 ? 'text-emerald-400' : 'text-rose-400'"
+                class="font-bold text-sm"
+                x-text="(deal.estimated_equity_dollars >= 0 ? '+' : '') + formatMoney(deal.estimated_equity_dollars)"
+              ></div>
+            </div>
+          </div>
+
+          <!-- Specs & Direct Links Footer -->
+          <div class="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
+            <div class="flex items-center gap-3">
+              <span x-show="deal.beds"><strong class="text-slate-200" x-text="deal.beds"></strong> bd</span>
+              <span x-show="deal.baths"><strong class="text-slate-200" x-text="deal.baths"></strong> ba</span>
+              <span x-show="deal.sqft"><strong class="text-slate-200" x-text="deal.sqft.toLocaleString()"></strong> sqft</span>
+              <span x-show="deal.year_built">Built <strong class="text-slate-200" x-text="deal.year_built"></strong></span>
+            </div>
+
+            <div class="flex items-center gap-2" @click.stop>
+              <a
+                :href="deal.pa_parcel_url"
+                target="_blank"
+                rel="noopener"
+                class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-medium transition"
+              >
+                PAO Parcel &#8599;
+              </a>
+              <a
+                :href="deal.auction_portal_url"
+                target="_blank"
+                rel="noopener"
+                class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-medium transition"
+              >
+                Auction &#8599;
+              </a>
+              <button
+                @click="openDrawer(deal)"
+                class="px-2.5 py-1 rounded bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-[11px] font-semibold transition"
+              >
+                Details &amp; Notes
+              </button>
+            </div>
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <!-- FULL TABLE VIEW -->
+    <div
+      x-cloak
+      x-show="viewMode === 'table'"
+      class="w-full h-full overflow-auto p-4 bg-slate-950"
+    >
+      <div class="rounded-xl border border-slate-800 overflow-hidden bg-slate-900/60">
+        <table class="w-full text-left border-collapse text-xs">
+          <thead>
+            <tr class="bg-slate-900 border-b border-slate-800 text-[11px] uppercase tracking-wider text-slate-400">
+              <th class="py-3 px-3">★</th>
+              <th class="py-3 px-3">Type / Case #</th>
+              <th class="py-3 px-3">Address &amp; Neighborhood</th>
+              <th class="py-3 px-3">ZIP Trend</th>
+              <th class="py-3 px-3">Auction Date</th>
+              <th class="py-3 px-3 text-right">Opening Bid</th>
+              <th class="py-3 px-3 text-right">Est. Market (ARV)</th>
+              <th class="py-3 px-3 text-right">Est. Equity ($)</th>
+              <th class="py-3 px-3 text-right">Equity %</th>
+              <th class="py-3 px-3">Specs</th>
+              <th class="py-3 px-3 text-right">Links</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-800/70">
+            <template x-for="deal in listings" :key="deal.id">
+              <tr
+                @click="openDrawer(deal)"
+                class="hover:bg-slate-800/50 cursor-pointer transition"
+              >
+                <td class="py-2.5 px-3" @click.stop>
+                  <button
+                    @click="toggleStar(deal)"
+                    :class="deal.is_starred ? 'text-yellow-400' : 'text-slate-600 hover:text-slate-400'"
+                    class="text-base"
+                  >
+                    &#9733;
+                  </button>
+                </td>
+                <td class="py-2.5 px-3">
+                  <div class="font-semibold text-white" x-text="deal.listing_type"></div>
+                  <div class="font-mono text-[11px] text-slate-400" x-text="deal.case_number"></div>
+                </td>
+                <td class="py-2.5 px-3">
+                  <div class="font-bold text-slate-100" x-text="deal.address"></div>
+                  <div class="text-slate-400" x-text="deal.neighborhood + ' (' + deal.zip_code + ') • RE# ' + deal.parcel_id"></div>
+                </td>
+                <td class="py-2.5 px-3">
+                  <span
+                    x-show="deal.zip_yoy_pct"
+                    class="px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/30 font-medium"
+                    x-text="'+' + deal.zip_yoy_pct + '% YoY'"
+                  ></span>
+                </td>
+                <td class="py-2.5 px-3 font-mono text-slate-300" x-text="deal.auction_date || 'TBD'"></td>
+                <td class="py-2.5 px-3 text-right font-bold text-white" x-text="formatMoney(deal.opening_bid)"></td>
+                <td class="py-2.5 px-3 text-right text-slate-200" x-text="formatMoney(deal.estimated_market_value)"></td>
+                <td class="py-2.5 px-3 text-right font-bold text-emerald-400" x-text="'+' + formatMoney(deal.estimated_equity_dollars)"></td>
+                <td class="py-2.5 px-3 text-right">
+                  <span
+                    :class="equityBadgeClass(deal.estimated_equity_pct)"
+                    class="px-2 py-0.5 rounded font-bold border"
+                    x-text="deal.estimated_equity_pct.toFixed(1) + '%'"
+                  ></span>
+                </td>
+                <td class="py-2.5 px-3 text-slate-300">
+                  <span x-text="(deal.beds || '-') + 'bd / ' + (deal.baths || '-') + 'ba • ' + (deal.sqft ? deal.sqft.toLocaleString() + ' sf' : '-')"></span>
+                </td>
+                <td class="py-2.5 px-3 text-right space-x-1" @click.stop>
+                  <a :href="deal.pa_parcel_url" target="_blank" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200">PAO</a>
+                  <a :href="deal.street_view_url" target="_blank" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200">Map</a>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- JACKSONVILLE ZIP TRENDS VIEW -->
+    <div
+      x-cloak
+      x-show="viewMode === 'zips'"
+      class="w-full h-full overflow-auto p-6 bg-slate-950"
+    >
+      <div class="max-w-6xl mx-auto">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h2 class="text-lg font-bold text-white">Jacksonville Neighborhood Appreciation &amp; ZHVI Baseline</h2>
+            <p class="text-xs text-slate-400">Click any ZIP code card to filter Duval foreclosure &amp; tax-deed deals in that corridor.</p>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <template x-for="z in stats.zip_trends" :key="z.zip_code">
+            <div
+              @click="filters.zip_code = z.zip_code; viewMode = 'split'; fetchListings()"
+              class="rounded-xl border border-slate-800 bg-slate-900/70 hover:border-emerald-500/60 p-4 cursor-pointer transition"
+            >
+              <div class="flex items-center justify-between">
+                <span class="text-base font-extrabold text-white" x-text="'ZIP ' + z.zip_code"></span>
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30" x-text="'+' + z.yoy_appreciation_pct + '% YoY'"></span>
+              </div>
+              <div class="text-sm font-semibold text-slate-200 mt-1" x-text="z.neighborhood_name"></div>
+              <p class="text-xs text-slate-400 mt-1.5" x-text="z.summary"></p>
+              <div class="mt-3 pt-3 border-t border-slate-800 grid grid-cols-3 gap-2 text-xs">
+                <div>
+                  <div class="text-[10px] text-slate-500 uppercase">ZHVI Median</div>
+                  <div class="font-bold text-slate-200" x-text="formatMoney(z.zhvi_median_value)"></div>
+                </div>
+                <div>
+                  <div class="text-[10px] text-slate-500 uppercase">Price / SqFt</div>
+                  <div class="font-bold text-slate-200" x-text="'$' + z.median_price_sqft"></div>
+                </div>
+                <div>
+                  <div class="text-[10px] text-slate-500 uppercase">Hotness</div>
+                  <div class="font-bold text-amber-400" x-text="z.hotness_score + ' / 100'"></div>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT PANE: Interactive Leaflet Map -->
+    <div
+      x-show="viewMode === 'split'"
+      class="hidden lg:block lg:w-[48%] xl:w-[52%] h-full relative bg-slate-900"
+    >
+      <div id="jax-map" class="w-full h-full z-0"></div>
+
+      <!-- Map Legend Overlay -->
+      <div class="absolute bottom-5 left-5 z-[400] bg-slate-900/95 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs shadow-xl backdrop-blur">
+        <div class="font-bold text-slate-200 mb-1.5 text-[11px] uppercase tracking-wider">Equity Pin Legend</div>
+        <div class="flex items-center gap-3">
+          <span class="flex items-center gap-1.5 text-slate-300">
+            <span class="w-3 h-3 rounded-full bg-emerald-500 inline-block border border-white"></span>
+            High (&ge;30%)
+          </span>
+          <span class="flex items-center gap-1.5 text-slate-300">
+            <span class="w-3 h-3 rounded-full bg-amber-500 inline-block border border-white"></span>
+            Moderate (15–29%)
+          </span>
+          <span class="flex items-center gap-1.5 text-slate-300">
+            <span class="w-3 h-3 rounded-full bg-slate-500 inline-block border border-white"></span>
+            Low (&lt;15%)
+          </span>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- PROPERTY DETAIL DRAWER -->
+  <div
+    x-cloak
+    x-show="drawerOpen && selectedDeal"
+    class="fixed inset-0 z-40 flex justify-end bg-black/60 backdrop-blur-xs"
+    @keydown.escape.window="drawerOpen = false"
+  >
+    <div
+      @click.outside="drawerOpen = false"
+      class="w-full max-w-xl bg-slate-900 border-l border-slate-800 h-full overflow-y-auto p-6 flex flex-col justify-between shadow-2xl"
+    >
+      <template x-if="selectedDeal">
+        <div class="space-y-5">
+          <!-- Drawer Header -->
+          <div class="flex items-start justify-between gap-3 border-b border-slate-800 pb-4">
+            <div>
+              <div class="flex items-center gap-2">
+                <span
+                  :class="selectedDeal.listing_type === 'Tax Deed' ? 'bg-purple-500/20 text-purple-300 border-purple-500/40' : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40'"
+                  class="px-2.5 py-0.5 rounded text-xs font-bold border"
+                  x-text="selectedDeal.listing_type"
+                ></span>
+                <span class="font-mono text-xs text-slate-400" x-text="selectedDeal.case_number"></span>
+              </div>
+              <h2 class="text-xl font-bold text-white mt-1" x-text="selectedDeal.address"></h2>
+              <p class="text-xs text-slate-400" x-text="selectedDeal.neighborhood + ' • ' + selectedDeal.city + ', FL ' + selectedDeal.zip_code + ' • RE# ' + selectedDeal.parcel_id"></p>
+            </div>
+            <button
+              @click="drawerOpen = false"
+              class="text-slate-400 hover:text-white text-2xl leading-none px-2"
+            >
+              &times;
+            </button>
+          </div>
+
+          <!-- Equity Breakdown Card -->
+          <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Equity &amp; Underwriting Math</span>
+              <span
+                :class="equityBadgeClass(selectedDeal.estimated_equity_pct)"
+                class="px-2.5 py-0.5 rounded-md text-xs font-extrabold border"
+                x-text="selectedDeal.estimated_equity_pct.toFixed(1) + '% Est. Equity'"
+              ></span>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 text-xs">
+              <div class="bg-slate-900 p-3 rounded-lg border border-slate-800">
+                <label class="text-[10px] uppercase text-slate-400 block">Opening Bid ($)</label>
+                <input
+                  type="number"
+                  step="500"
+                  x-model.number="selectedDeal.opening_bid"
+                  class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-white font-bold text-sm"
+                />
+              </div>
+              <div class="bg-slate-900 p-3 rounded-lg border border-slate-800">
+                <label class="text-[10px] uppercase text-slate-400 block">Est. Market Value / ARV ($)</label>
+                <input
+                  type="number"
+                  step="1000"
+                  x-model.number="selectedDeal.estimated_market_value"
+                  class="mt-1 w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-white font-bold text-sm"
+                />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2 pt-1 text-xs">
+              <div>
+                <div class="text-slate-500">Judgment / Cert</div>
+                <div class="font-semibold text-slate-200" x-text="formatMoney(selectedDeal.judgment_amount || selectedDeal.opening_bid)"></div>
+              </div>
+              <div>
+                <div class="text-slate-500">PAO Assessed</div>
+                <div class="font-semibold text-slate-200" x-text="formatMoney(selectedDeal.assessed_value || 0)"></div>
+              </div>
+              <div>
+                <div class="text-slate-500">Est. Gross Spread</div>
+                <div class="font-bold text-emerald-400" x-text="'+' + formatMoney((selectedDeal.estimated_market_value || 0) - (selectedDeal.opening_bid || 0))"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Property Details -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+            <div class="bg-slate-950 border border-slate-800 rounded-lg p-2.5">
+              <div class="text-slate-500">Bed / Bath</div>
+              <div class="font-bold text-white mt-0.5" x-text="(selectedDeal.beds || '-') + ' bd / ' + (selectedDeal.baths || '-') + ' ba'"></div>
+            </div>
+            <div class="bg-slate-950 border border-slate-800 rounded-lg p-2.5">
+              <div class="text-slate-500">Living Area</div>
+              <div class="font-bold text-white mt-0.5" x-text="selectedDeal.sqft ? selectedDeal.sqft.toLocaleString() + ' sqft' : 'N/A'"></div>
+            </div>
+            <div class="bg-slate-950 border border-slate-800 rounded-lg p-2.5">
+              <div class="text-slate-500">Year Built</div>
+              <div class="font-bold text-white mt-0.5" x-text="selectedDeal.year_built || 'N/A'"></div>
+            </div>
+            <div class="bg-slate-950 border border-slate-800 rounded-lg p-2.5">
+              <div class="text-slate-500">Auction Date</div>
+              <div class="font-bold text-amber-300 mt-0.5" x-text="selectedDeal.auction_date || 'TBD'"></div>
+            </div>
+          </div>
+
+          <div class="text-xs text-slate-400 bg-slate-950 border border-slate-800 rounded-lg p-3">
+            <span class="text-slate-500 uppercase text-[10px] block">Plaintiff / Certificate Holder</span>
+            <span class="text-slate-200 font-medium" x-text="selectedDeal.plaintiff_or_holder || 'Duval County Clerk Record'"></span>
+          </div>
+
+          <!-- Official 1-Click Links -->
+          <div>
+            <div class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">1-Click County &amp; Map Records</div>
+            <div class="grid grid-cols-2 gap-2 text-xs">
+              <a
+                :href="selectedDeal.pa_parcel_url"
+                target="_blank"
+                rel="noopener"
+                class="flex items-center justify-between px-3 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-100 font-medium transition"
+              >
+                <span>Duval Property Appraiser</span>
+                <span>&#8599;</span>
+              </a>
+              <a
+                :href="selectedDeal.clerk_case_url"
+                target="_blank"
+                rel="noopener"
+                class="flex items-center justify-between px-3 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-100 font-medium transition"
+              >
+                <span>Duval Clerk CORE Docket</span>
+                <span>&#8599;</span>
+              </a>
+              <a
+                :href="selectedDeal.auction_portal_url"
+                target="_blank"
+                rel="noopener"
+                class="flex items-center justify-between px-3 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-100 font-medium transition"
+              >
+                <span>Official Auction Portal</span>
+                <span>&#8599;</span>
+              </a>
+              <a
+                :href="selectedDeal.street_view_url"
+                target="_blank"
+                rel="noopener"
+                class="flex items-center justify-between px-3 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-100 font-medium transition"
+              >
+                <span>Google Maps / Street View</span>
+                <span>&#8599;</span>
+              </a>
+            </div>
+          </div>
+
+          <!-- Personal Workflow & Notes -->
+          <div class="space-y-3 pt-2 border-t border-slate-800">
+            <div class="flex items-center justify-between gap-3">
+              <label class="text-xs font-bold uppercase tracking-wider text-slate-400">Deal Pipeline Status</label>
+              <select
+                x-model="selectedDeal.status"
+                class="bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white"
+              >
+                <option value="Upcoming">Upcoming</option>
+                <option value="Reviewing">Reviewing Title / Liens</option>
+                <option value="Bid Ready">Bid Ready</option>
+                <option value="Sold">Sold</option>
+                <option value="Canceled">Canceled</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1">Due Diligence &amp; Rehab Notes</label>
+              <textarea
+                rows="4"
+                x-model="selectedDeal.notes"
+                placeholder="Record municipal lien findings, roof permit year, rehab estimate, max bid ceiling..."
+                class="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-xs text-slate-100 focus:outline-none focus:border-emerald-500"
+              ></textarea>
+            </div>
+
+            <div class="flex items-center justify-between pt-2">
+              <button
+                @click="deleteDeal(selectedDeal.id)"
+                class="px-3 py-2 rounded-lg text-xs font-medium text-rose-400 hover:bg-rose-500/10 border border-rose-500/30 transition"
+              >
+                Delete Listing
+              </button>
+              <button
+                @click="saveDealChanges()"
+                class="px-5 py-2 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg transition"
+              >
+                Save Underwriting &amp; Notes
+              </button>
+            </div>
+          </div>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <!-- SYNC / IMPORT MODAL -->
+  <div
+    x-cloak
+    x-show="showSyncModal"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+    @keydown.escape.window="showSyncModal = false"
+  >
+    <div
+      @click.outside="showSyncModal = false"
+      class="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-5 shadow-2xl"
+    >
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div>
+          <h3 class="text-base font-bold text-white">Sync &amp; Import Duval County Deals</h3>
+          <p class="text-xs text-slate-400">Populate or update PostgreSQL listings via 1-Click Sync or CSV/JSON upload.</p>
+        </div>
+        <button @click="showSyncModal = false" class="text-slate-400 hover:text-white text-xl">&times;</button>
+      </div>
+
+      <!-- 1-Click Sync -->
+      <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 flex items-center justify-between gap-4">
+        <div>
+          <div class="text-xs font-bold text-white">1-Click Duval County Feed &amp; ZIP Baseline Sync</div>
+          <p class="text-[11px] text-slate-400 mt-0.5">
+            Refreshes Jacksonville foreclosure &amp; tax-deed starter listings and Zillow ZHVI neighborhood trends.
+          </p>
+        </div>
+        <button
+          @click="runSync()"
+          :disabled="isSyncing"
+          class="shrink-0 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-bold transition"
+        >
+          <span x-text="isSyncing ? 'Syncing...' : 'Sync Now'"></span>
+        </button>
+      </div>
+
+      <!-- CSV / JSON Upload -->
+      <form @submit.prevent="uploadFile" class="space-y-3 bg-slate-950 border border-slate-800 rounded-xl p-4">
+        <div class="text-xs font-bold text-white">Upload CSV or JSON Spreadsheet</div>
+        <p class="text-[11px] text-slate-400">
+          Supports exports from <code class="text-slate-300">duval.realforeclose.com</code>, <code class="text-slate-300">duval.realtaxdeed.com</code>, or custom spreadsheets. Auto-upserts by <code class="text-emerald-300">case_number</code> or <code class="text-emerald-300">parcel_id</code>.
+        </p>
+        <input
+          type="file"
+          x-ref="csvFile"
+          accept=".csv,.json"
+          class="block w-full text-xs text-slate-300 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-emerald-300 hover:file:bg-slate-700"
+        />
+        <div class="flex justify-end">
+          <button
+            type="submit"
+            :disabled="isUploading"
+            class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-bold transition"
+          >
+            <span x-text="isUploading ? 'Importing...' : 'Upload &amp; Upsert'"></span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ADD MANUAL DEAL MODAL -->
+  <div
+    x-cloak
+    x-show="showAddModal"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+    @keydown.escape.window="showAddModal = false"
+  >
+    <div
+      @click.outside="showAddModal = false"
+      class="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-2xl"
+    >
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="text-base font-bold text-white">Add Jacksonville Foreclosure / Tax Deed</h3>
+        <button @click="showAddModal = false" class="text-slate-400 hover:text-white text-xl">&times;</button>
+      </div>
+
+      <form @submit.prevent="createManualDeal()" class="grid grid-cols-2 gap-3 text-xs">
+        <div>
+          <label class="text-slate-400 block mb-1">Listing Type</label>
+          <select x-model="newDeal.listing_type" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white">
+            <option value="Foreclosure">Foreclosure</option>
+            <option value="Tax Deed">Tax Deed</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-slate-400 block mb-1">Case / Certificate # *</label>
+          <input type="text" required x-model="newDeal.case_number" placeholder="16-2026-CA-001234" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white" />
+        </div>
+        <div class="col-span-2">
+          <label class="text-slate-400 block mb-1">Street Address *</label>
+          <input type="text" required x-model="newDeal.address" placeholder="1234 Oak St" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white" />
+        </div>
+        <div>
+          <label class="text-slate-400 block mb-1">ZIP Code *</label>
+          <input type="text" required x-model="newDeal.zip_code" placeholder="32204" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white" />
+        </div>
+        <div>
+          <label class="text-slate-400 block mb-1">Duval Parcel RE#</label>
+          <input type="text" x-model="newDeal.parcel_id" placeholder="074512-0000" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white" />
+        </div>
+        <div>
+          <label class="text-slate-400 block mb-1">Opening Bid ($) *</label>
+          <input type="number" required x-model.number="newDeal.opening_bid" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white" />
+        </div>
+        <div>
+          <label class="text-slate-400 block mb-1">Est. Market Value ($) *</label>
+          <input type="number" required x-model.number="newDeal.estimated_market_value" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white" />
+        </div>
+        <div>
+          <label class="text-slate-400 block mb-1">Auction Date</label>
+          <input type="date" x-model="newDeal.auction_date" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white" />
+        </div>
+        <div>
+          <label class="text-slate-400 block mb-1">SqFt</label>
+          <input type="number" x-model.number="newDeal.sqft" placeholder="1750" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white" />
+        </div>
+        <div class="col-span-2">
+          <label class="text-slate-400 block mb-1">Notes</label>
+          <input type="text" x-model="newDeal.notes" placeholder="Initial underwriting note..." class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white" />
+        </div>
+        <div class="col-span-2 flex justify-end gap-2 pt-2">
+          <button type="button" @click="showAddModal = false" class="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300">Cancel</button>
+          <button type="submit" class="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold">Save Deal</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    function dealDashboard() {
+      return {
+        viewMode: 'split',
+        listings: [],
+        stats: {
+          total_listings: 0,
+          high_equity_count: 0,
+          starred_count: 0,
+          foreclosure_count: 0,
+          tax_deed_count: 0,
+          avg_equity_pct: 0,
+          total_equity_dollars: 0,
+          zip_codes: [],
+          neighborhoods: [],
+          zip_trends: [],
+        },
+        filters: {
+          search: '',
+          listing_type: 'all',
+          zip_code: 'all',
+          max_opening_bid: '',
+          min_equity_pct: '',
+          sort_by: 'equity_desc',
+          starred_only: false,
+        },
+        selectedDeal: null,
+        drawerOpen: false,
+        showSyncModal: false,
+        showAddModal: false,
+        isSyncing: false,
+        isUploading: false,
+        toastMessage: '',
+        map: null,
+        markersLayer: null,
+        zipCirclesLayer: null,
+        showZipCircles: false,
+        markerById: {},
+        newDeal: {
+          listing_type: 'Foreclosure',
+          case_number: '',
+          parcel_id: '',
+          address: '',
+          zip_code: '32204',
+          opening_bid: 185000,
+          estimated_market_value: 295000,
+          auction_date: '',
+          sqft: 1650,
+          notes: '',
+        },
+
+        async init() {
+          this.initMap();
+          await Promise.all([this.fetchStats(), this.fetchListings()]);
+        },
+
+        initMap() {
+          this.map = L.map('jax-map', {
+            center: [30.312, -81.62],
+            zoom: 11,
+            zoomControl: true,
+          });
+
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; OpenStreetMap contributors',
+          }).addTo(this.map);
+
+          this.markersLayer = L.layerGroup().addTo(this.map);
+          this.zipCirclesLayer = L.layerGroup();
+        },
+
+        async fetchStats() {
+          const res = await fetch('/api/stats');
+          if (res.ok) {
+            this.stats = await res.json();
+            this.renderZipOverlay();
+          }
+        },
+
+        async fetchListings() {
+          const params = new URLSearchParams();
+          if (this.filters.search) params.set('search', this.filters.search);
+          if (this.filters.listing_type !== 'all') params.set('listing_type', this.filters.listing_type);
+          if (this.filters.zip_code !== 'all') params.set('zip_code', this.filters.zip_code);
+          if (this.filters.max_opening_bid) params.set('max_opening_bid', this.filters.max_opening_bid);
+          if (this.filters.min_equity_pct) params.set('min_equity_pct', this.filters.min_equity_pct);
+          if (this.filters.sort_by) params.set('sort_by', this.filters.sort_by);
+          if (this.filters.starred_only) params.set('starred_only', 'true');
+
+          const res = await fetch('/api/listings?' + params.toString());
+          if (res.ok) {
+            const data = await res.json();
+            this.listings = data.items;
+            this.renderPins();
+          }
+        },
+
+        renderPins() {
+          if (!this.markersLayer) return;
+          this.markersLayer.clearLayers();
+          this.markerById = {};
+
+          const bounds = [];
+          this.listings.forEach((deal) => {
+            if (!deal.lat || !deal.lng) return;
+            const bg =
+              deal.estimated_equity_pct >= 30
+                ? '#10b981'
+                : deal.estimated_equity_pct >= 15
+                ? '#f59e0b'
+                : '#64748b';
+
+            const shortBid = '$' + Math.round((deal.opening_bid || 0) / 1000) + 'k';
+            const icon = L.divIcon({
+              className: '',
+              html: `<div class="custom-pin" style="background:${bg}">${shortBid} &bull; ${Math.round(deal.estimated_equity_pct)}%</div>`,
+              iconSize: [78, 24],
+              iconAnchor: [39, 12],
+            });
+
+            const marker = L.marker([deal.lat, deal.lng], { icon });
+            marker.on('click', () => {
+              this.openDrawer(deal);
+            });
+            marker.bindTooltip(
+              `<strong>${deal.address}</strong><br/>${deal.listing_type} &bull; Equity: +$${Math.round(deal.estimated_equity_dollars).toLocaleString()} (${deal.estimated_equity_pct}%)`,
+              { direction: 'top', offset: [0, -10] }
+            );
+            this.markersLayer.addLayer(marker);
+            this.markerById[deal.id] = marker;
+            bounds.push([deal.lat, deal.lng]);
+          });
+
+          if (bounds.length > 1) {
+            this.map.fitBounds(bounds, { padding: [45, 45], maxZoom: 13 });
+          } else if (bounds.length === 1) {
+            this.map.setView(bounds[0], 14);
+          }
+        },
+
+        renderZipOverlay() {
+          if (!this.zipCirclesLayer) return;
+          this.zipCirclesLayer.clearLayers();
+          (this.stats.zip_trends || []).forEach((z) => {
+            const circle = L.circle([z.lat, z.lng], {
+              radius: 2600,
+              color: '#f59e0b',
+              weight: 1.5,
+              fillColor: '#10b981',
+              fillOpacity: 0.14,
+            });
+            circle.bindTooltip(
+              `<strong>ZIP ${z.zip_code} (${z.neighborhood_name})</strong><br/>YoY Appreciation: +${z.yoy_appreciation_pct}%<br/>Median ZHVI: $${Math.round(z.zhvi_median_value).toLocaleString()} ($${z.median_price_sqft}/sqft)`
+            );
+            this.zipCirclesLayer.addLayer(circle);
+          });
+        },
+
+        toggleZipOverlay() {
+          this.showZipCircles = !this.showZipCircles;
+          if (this.showZipCircles) {
+            this.zipCirclesLayer.addTo(this.map);
+          } else {
+            this.map.removeLayer(this.zipCirclesLayer);
+          }
+        },
+
+        selectDeal(deal, fly = false) {
+          this.selectedDeal = { ...deal };
+          if (fly && this.map && deal.lat && deal.lng) {
+            this.map.flyTo([deal.lat, deal.lng], 14, { duration: 0.6 });
+          }
+        },
+
+        openDrawer(deal) {
+          this.selectDeal(deal, true);
+          this.drawerOpen = true;
+        },
+
+        async toggleStar(deal) {
+          const updatedStar = !deal.is_starred;
+          deal.is_starred = updatedStar;
+          const res = await fetch(`/api/listings/${deal.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ is_starred: updatedStar }),
+          });
+          if (res.ok) {
+            await this.fetchStats();
+            if (this.filters.starred_only) {
+              await this.fetchListings();
+            }
+          }
+        },
+
+        async saveDealChanges() {
+          if (!this.selectedDeal) return;
+          const res = await fetch(`/api/listings/${this.selectedDeal.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              notes: this.selectedDeal.notes,
+              status: this.selectedDeal.status,
+              opening_bid: this.selectedDeal.opening_bid,
+              estimated_market_value: this.selectedDeal.estimated_market_value,
+            }),
+          });
+          if (res.ok) {
+            const updated = await res.json();
+            this.selectedDeal = updated;
+            await Promise.all([this.fetchListings(), this.fetchStats()]);
+            this.showToast('Saved underwriting & notes for ' + updated.address);
+          }
+        },
+
+        async deleteDeal(id) {
+          const res = await fetch(`/api/listings/${id}`, { method: 'DELETE' });
+          if (res.ok) {
+            this.drawerOpen = false;
+            this.selectedDeal = null;
+            await Promise.all([this.fetchListings(), this.fetchStats()]);
+            this.showToast('Listing removed.');
+          }
+        },
+
+        async runSync() {
+          this.isSyncing = true;
+          try {
+            const res = await fetch('/api/sync', { method: 'POST' });
+            if (res.ok) {
+              const data = await res.json();
+              await Promise.all([this.fetchStats(), this.fetchListings()]);
+              this.showSyncModal = false;
+              this.showToast(`Synced Duval County feed (${data.total_listings} deals active).`);
+            }
+          } finally {
+            this.isSyncing = false;
+          }
+        },
+
+        async uploadFile() {
+          const fileInput = this.$refs.csvFile;
+          if (!fileInput || !fileInput.files.length) return;
+          this.isUploading = true;
+          try {
+            const file = fileInput.files[0];
+            const text = await file.text();
+            const res = await fetch('/api/import', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ filename: file.name, file_content: text }),
+            });
+            if (res.ok) {
+              const data = await res.json();
+              fileInput.value = '';
+              await Promise.all([this.fetchStats(), this.fetchListings()]);
+              this.showSyncModal = false;
+              this.showToast(`Imported ${data.added} new & updated ${data.updated} deals.`);
+            }
+          } finally {
+            this.isUploading = false;
+          }
+        },
+
+        async createManualDeal() {
+          const res = await fetch('/api/listings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(this.newDeal),
+          });
+          if (res.ok) {
+            this.showAddModal = false;
+            await Promise.all([this.fetchStats(), this.fetchListings()]);
+            this.showToast('Added deal: ' + this.newDeal.address);
+          }
+        },
+
+        resetFilters() {
+          this.filters = {
+            search: '',
+            listing_type: 'all',
+            zip_code: 'all',
+            max_opening_bid: '',
+            min_equity_pct: '',
+            sort_by: 'equity_desc',
+            starred_only: false,
+          };
+          this.fetchListings();
+        },
+
+        formatMoney(val) {
+          if (val === null || val === undefined || isNaN(val)) return '$0';
+          return '$' + Math.round(Number(val)).toLocaleString();
+        },
+
+        equityBadgeClass(pct) {
+          if (pct >= 30) return 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40';
+          if (pct >= 15) return 'bg-amber-500/15 text-amber-300 border-amber-500/40';
+          return 'bg-slate-800 text-slate-300 border-slate-700';
+        },
+
+        showToast(msg) {
+          this.toastMessage = msg;
+          setTimeout(() => {
+            if (this.toastMessage === msg) this.toastMessage = '';
+          }, 4000);
+        },
+      };
+    }
+  </script>
+</body>
+</html>
