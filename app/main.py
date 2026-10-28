@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from datetime import date
 from pathlib import Path
 from typing import Any, Dict, Optional
+from urllib.parse import quote_plus
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, StreamingResponse
@@ -75,6 +76,8 @@ def _serialize_listing(
     data["auction_date"] = item.auction_date.isoformat() if item.auction_date else None
     data["created_at"] = item.created_at.isoformat() if item.created_at else None
     data["updated_at"] = item.updated_at.isoformat() if item.updated_at else None
+    full_addr = f"{item.address}, {item.city}, {item.state} {item.zip_code}"
+    data["zillow_url"] = f"https://www.zillow.com/homes/{quote_plus(full_addr)}_rb/"
 
     ztrend = zip_map.get(item.zip_code)
     if ztrend:

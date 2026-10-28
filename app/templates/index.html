@@ -426,12 +426,20 @@
 
             <div class="flex items-center gap-2" @click.stop>
               <a
-                :href="deal.pa_parcel_url"
+                :href="deal.zillow_url"
+                target="_blank"
+                rel="noopener"
+                class="px-2 py-1 rounded bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 text-[11px] font-semibold transition"
+              >
+                Zillow &#8599;
+              </a>
+              <a
+                :href="deal.street_view_url"
                 target="_blank"
                 rel="noopener"
                 class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-medium transition"
               >
-                PAO Parcel &#8599;
+                Map &#8599;
               </a>
               <a
                 :href="deal.auction_portal_url"
@@ -736,6 +744,15 @@
           <div>
             <div class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">1-Click County &amp; Map Records</div>
             <div class="grid grid-cols-2 gap-2 text-xs">
+              <a
+                :href="selectedDeal.zillow_url"
+                target="_blank"
+                rel="noopener"
+                class="col-span-2 flex items-center justify-between px-3 py-2.5 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-200 font-bold transition"
+              >
+                <span>Open Property on Zillow</span>
+                <span>&#8599;</span>
+              </a>
               <a
                 :href="selectedDeal.pa_parcel_url"
                 target="_blank"

@@ -94,22 +94,17 @@ class ForeclosureListing(SQLModel, table=True):
         is_sjc = self.county.lower().startswith("st")
 
         if is_sjc:
-            self.pa_parcel_url = (
-                f"https://qpublic.schneidercorp.com/Application.aspx?AppID=960&LayerID=19106&PageTypeID=4&KeyValue={clean_re}"
-                if clean_re
-                else "https://www.sjcpa.us/parcel-search/"
-            )
+            self.pa_parcel_url = "https://qpublic.schneidercorp.com/Application.aspx?AppID=960&LayerID=19106&PageTypeID=2&PageID=8434"
             self.clerk_case_url = "https://apps.stjohnsclerk.com/Benchmark/Home.aspx/Search"
             if self.listing_type.lower() == "tax deed":
                 self.auction_portal_url = "https://saintjohns.realtaxdeed.com/"
             else:
                 self.auction_portal_url = "https://saintjohns.realforeclose.com/"
         else:
-            self.pa_parcel_url = (
-                f"https://paopropertysearch.coj.net/Basic/Detail.aspx?RE={clean_re}"
-                if clean_re
-                else "https://paopropertysearch.coj.net/"
-            )
+            if clean_re and clean_re != "0000000000" and not clean_re.startswith("DUVAL") and not clean_re.startswith("RE"):
+                self.pa_parcel_url = f"https://paopropertysearch.coj.net/Basic/Detail.aspx?RE={clean_re}"
+            else:
+                self.pa_parcel_url = "https://paopropertysearch.coj.net/Basic/Search.aspx"
             self.clerk_case_url = "https://core.duvalclerk.com/"
             if self.listing_type.lower() == "tax deed":
                 self.auction_portal_url = "https://duval.realtaxdeed.com/"
