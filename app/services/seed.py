@@ -5,10 +5,12 @@ from app.models import ForeclosureListing, ZipTrend, utc_now
 
 
 def get_jacksonville_zip_trends() -> List[Dict]:
-    """Realistic Zillow Home Value Index (ZHVI) & Duval neighborhood baseline data."""
+    """Realistic Zillow Home Value Index (ZHVI) & Duval + St. Johns County neighborhood baselines."""
     return [
+        # --- DUVAL COUNTY (JACKSONVILLE) ---
         {
             "zip_code": "32204",
+            "county": "Duval",
             "neighborhood_name": "Riverside / Five Points",
             "zhvi_median_value": 412000.0,
             "yoy_appreciation_pct": 6.4,
@@ -21,6 +23,7 @@ def get_jacksonville_zip_trends() -> List[Dict]:
         },
         {
             "zip_code": "32205",
+            "county": "Duval",
             "neighborhood_name": "Avondale / Murray Hill",
             "zhvi_median_value": 365000.0,
             "yoy_appreciation_pct": 7.1,
@@ -33,6 +36,7 @@ def get_jacksonville_zip_trends() -> List[Dict]:
         },
         {
             "zip_code": "32206",
+            "county": "Duval",
             "neighborhood_name": "Historic Springfield",
             "zhvi_median_value": 278000.0,
             "yoy_appreciation_pct": 8.2,
@@ -45,6 +49,7 @@ def get_jacksonville_zip_trends() -> List[Dict]:
         },
         {
             "zip_code": "32207",
+            "county": "Duval",
             "neighborhood_name": "San Marco / St. Nicholas",
             "zhvi_median_value": 438000.0,
             "yoy_appreciation_pct": 5.9,
@@ -57,6 +62,7 @@ def get_jacksonville_zip_trends() -> List[Dict]:
         },
         {
             "zip_code": "32210",
+            "county": "Duval",
             "neighborhood_name": "Ortega / Cedar Hills",
             "zhvi_median_value": 262000.0,
             "yoy_appreciation_pct": 4.3,
@@ -69,6 +75,7 @@ def get_jacksonville_zip_trends() -> List[Dict]:
         },
         {
             "zip_code": "32211",
+            "county": "Duval",
             "neighborhood_name": "Arlington / Old Mill Branch",
             "zhvi_median_value": 248000.0,
             "yoy_appreciation_pct": 5.1,
@@ -81,6 +88,7 @@ def get_jacksonville_zip_trends() -> List[Dict]:
         },
         {
             "zip_code": "32216",
+            "county": "Duval",
             "neighborhood_name": "Southpoint / Sans Souci",
             "zhvi_median_value": 318000.0,
             "yoy_appreciation_pct": 5.6,
@@ -93,6 +101,7 @@ def get_jacksonville_zip_trends() -> List[Dict]:
         },
         {
             "zip_code": "32218",
+            "county": "Duval",
             "neighborhood_name": "Oceanway / Northside",
             "zhvi_median_value": 284000.0,
             "yoy_appreciation_pct": 4.8,
@@ -105,6 +114,7 @@ def get_jacksonville_zip_trends() -> List[Dict]:
         },
         {
             "zip_code": "32223",
+            "county": "Duval",
             "neighborhood_name": "Mandarin",
             "zhvi_median_value": 425000.0,
             "yoy_appreciation_pct": 5.4,
@@ -117,6 +127,7 @@ def get_jacksonville_zip_trends() -> List[Dict]:
         },
         {
             "zip_code": "32224",
+            "county": "Duval",
             "neighborhood_name": "Hodges / Glen Kernan / Town Center",
             "zhvi_median_value": 489000.0,
             "yoy_appreciation_pct": 6.7,
@@ -129,6 +140,7 @@ def get_jacksonville_zip_trends() -> List[Dict]:
         },
         {
             "zip_code": "32246",
+            "county": "Duval",
             "neighborhood_name": "Sandalwood / Intracoastal West",
             "zhvi_median_value": 342000.0,
             "yoy_appreciation_pct": 5.8,
@@ -141,6 +153,7 @@ def get_jacksonville_zip_trends() -> List[Dict]:
         },
         {
             "zip_code": "32250",
+            "county": "Duval",
             "neighborhood_name": "Jacksonville Beach",
             "zhvi_median_value": 645000.0,
             "yoy_appreciation_pct": 7.6,
@@ -153,6 +166,7 @@ def get_jacksonville_zip_trends() -> List[Dict]:
         },
         {
             "zip_code": "32256",
+            "county": "Duval",
             "neighborhood_name": "Baymeadows / Deerwood",
             "zhvi_median_value": 356000.0,
             "yoy_appreciation_pct": 5.2,
@@ -163,17 +177,124 @@ def get_jacksonville_zip_trends() -> List[Dict]:
             "lng": -81.5512,
             "summary": "Major employment corridor with gated communities and strong condo/townhome rental demand.",
         },
+        # --- ST. JOHNS COUNTY ---
+        {
+            "zip_code": "32081",
+            "county": "St. Johns",
+            "neighborhood_name": "Nocatee / Ponte Vedra",
+            "zhvi_median_value": 685000.0,
+            "yoy_appreciation_pct": 8.4,
+            "median_price_sqft": 292.0,
+            "median_days_on_market": 19,
+            "hotness_score": 96,
+            "lat": 30.1045,
+            "lng": -81.4310,
+            "summary": "Top-selling master-planned community in FL; A+ St. Johns schools & rapid family inflow.",
+        },
+        {
+            "zip_code": "32082",
+            "county": "St. Johns",
+            "neighborhood_name": "Ponte Vedra Beach / Sawgrass",
+            "zhvi_median_value": 890000.0,
+            "yoy_appreciation_pct": 7.9,
+            "median_price_sqft": 398.0,
+            "median_days_on_market": 21,
+            "hotness_score": 95,
+            "lat": 30.1982,
+            "lng": -81.3885,
+            "summary": "Luxury coastal & golf resort corridor (TPC Sawgrass); massive dollar equity spreads.",
+        },
+        {
+            "zip_code": "32259",
+            "county": "St. Johns",
+            "neighborhood_name": "St. Johns / Julington Creek / Shearwater",
+            "zhvi_median_value": 548000.0,
+            "yoy_appreciation_pct": 7.3,
+            "median_price_sqft": 244.0,
+            "median_days_on_market": 22,
+            "hotness_score": 92,
+            "lat": 30.0890,
+            "lng": -81.5940,
+            "summary": "Premier family suburb along CR-210 & SR-13; top-ranked St. Johns County schools.",
+        },
+        {
+            "zip_code": "32092",
+            "county": "St. Johns",
+            "neighborhood_name": "World Golf Village / Murabella / SilverLeaf",
+            "zhvi_median_value": 468000.0,
+            "yoy_appreciation_pct": 6.9,
+            "median_price_sqft": 221.0,
+            "median_days_on_market": 25,
+            "hotness_score": 89,
+            "lat": 29.9780,
+            "lng": -81.4820,
+            "summary": "Booming SilverLeaf & WGV corridor west of I-95; high volume of newer single-family homes.",
+        },
+        {
+            "zip_code": "32095",
+            "county": "St. Johns",
+            "neighborhood_name": "Palencia / North St. Augustine",
+            "zhvi_median_value": 532000.0,
+            "yoy_appreciation_pct": 6.6,
+            "median_price_sqft": 246.0,
+            "median_days_on_market": 24,
+            "hotness_score": 87,
+            "lat": 29.9920,
+            "lng": -81.3690,
+            "summary": "Gated US-1 corridor between Nocatee and Historic St. Augustine; strong executive resale.",
+        },
+        {
+            "zip_code": "32080",
+            "county": "St. Johns",
+            "neighborhood_name": "St. Augustine Beach / Anastasia Island",
+            "zhvi_median_value": 625000.0,
+            "yoy_appreciation_pct": 7.8,
+            "median_price_sqft": 358.0,
+            "median_days_on_market": 21,
+            "hotness_score": 93,
+            "lat": 29.8520,
+            "lng": -81.2690,
+            "summary": "High-yield coastal vacation rental & second-home barrier island market.",
+        },
+        {
+            "zip_code": "32084",
+            "county": "St. Johns",
+            "neighborhood_name": "Historic St. Augustine / Lincolnville",
+            "zhvi_median_value": 442000.0,
+            "yoy_appreciation_pct": 6.5,
+            "median_price_sqft": 268.0,
+            "median_days_on_market": 26,
+            "hotness_score": 86,
+            "lat": 29.8947,
+            "lng": -81.3145,
+            "summary": "Historic district & Flagler College area; high hospitality, STR, and flip demand.",
+        },
+        {
+            "zip_code": "32086",
+            "county": "St. Johns",
+            "neighborhood_name": "St. Augustine South / St. Augustine Shores",
+            "zhvi_median_value": 368000.0,
+            "yoy_appreciation_pct": 5.7,
+            "median_price_sqft": 212.0,
+            "median_days_on_market": 28,
+            "hotness_score": 82,
+            "lat": 29.8260,
+            "lng": -81.3240,
+            "summary": "Intracoastal-adjacent established neighborhoods with attainable entry bids.",
+        },
     ]
 
 
 def get_starter_jacksonville_listings() -> List[Dict]:
-    """Realistic Duval County Foreclosure & Tax Deed listings across prime Jacksonville neighborhoods."""
+    """Realistic Duval County & St. Johns County Foreclosure & Tax Deed listings."""
     today = date.today()
     return [
+        # ==================== DUVAL COUNTY ====================
         {
             "case_number": "16-2025-CA-004182",
             "parcel_id": "074512-0000",
             "listing_type": "Foreclosure",
+            "county": "Duval",
             "address": "2145 Park St",
             "city": "Jacksonville",
             "state": "FL",
@@ -201,6 +322,7 @@ def get_starter_jacksonville_listings() -> List[Dict]:
             "case_number": "16-2025-CA-005019",
             "parcel_id": "063198-0110",
             "listing_type": "Foreclosure",
+            "county": "Duval",
             "address": "3812 Post St",
             "city": "Jacksonville",
             "state": "FL",
@@ -228,6 +350,7 @@ def get_starter_jacksonville_listings() -> List[Dict]:
             "case_number": "TD-2026-00841",
             "parcel_id": "071844-0000",
             "listing_type": "Tax Deed",
+            "county": "Duval",
             "address": "1534 Hubbard St",
             "city": "Jacksonville",
             "state": "FL",
@@ -255,6 +378,7 @@ def get_starter_jacksonville_listings() -> List[Dict]:
             "case_number": "16-2025-CA-006290",
             "parcel_id": "081904-0020",
             "listing_type": "Foreclosure",
+            "county": "Duval",
             "address": "1824 Landon Ave",
             "city": "Jacksonville",
             "state": "FL",
@@ -282,6 +406,7 @@ def get_starter_jacksonville_listings() -> List[Dict]:
             "case_number": "16-2025-CA-005811",
             "parcel_id": "158920-0450",
             "listing_type": "Foreclosure",
+            "county": "Duval",
             "address": "11428 Brady Rd",
             "city": "Jacksonville",
             "state": "FL",
@@ -309,6 +434,7 @@ def get_starter_jacksonville_listings() -> List[Dict]:
             "case_number": "16-2025-CA-006914",
             "parcel_id": "165410-1120",
             "listing_type": "Foreclosure",
+            "county": "Duval",
             "address": "12740 Bartram Park Blvd #408",
             "city": "Jacksonville",
             "state": "FL",
@@ -336,6 +462,7 @@ def get_starter_jacksonville_listings() -> List[Dict]:
             "case_number": "16-2025-CA-004903",
             "parcel_id": "167102-0230",
             "listing_type": "Foreclosure",
+            "county": "Duval",
             "address": "12318 Autumn Crest Trl",
             "city": "Jacksonville",
             "state": "FL",
@@ -363,6 +490,7 @@ def get_starter_jacksonville_listings() -> List[Dict]:
             "case_number": "TD-2026-00915",
             "parcel_id": "129450-0000",
             "listing_type": "Tax Deed",
+            "county": "Duval",
             "address": "6422 Merrill Rd",
             "city": "Jacksonville",
             "state": "FL",
@@ -390,6 +518,7 @@ def get_starter_jacksonville_listings() -> List[Dict]:
             "case_number": "16-2025-CA-007105",
             "parcel_id": "094812-0010",
             "listing_type": "Foreclosure",
+            "county": "Duval",
             "address": "4918 Ortega Forest Dr",
             "city": "Jacksonville",
             "state": "FL",
@@ -417,6 +546,7 @@ def get_starter_jacksonville_listings() -> List[Dict]:
             "case_number": "16-2025-CA-005340",
             "parcel_id": "178230-0000",
             "listing_type": "Foreclosure",
+            "county": "Duval",
             "address": "714 9th Ave S",
             "city": "Jacksonville Beach",
             "state": "FL",
@@ -444,6 +574,7 @@ def get_starter_jacksonville_listings() -> List[Dict]:
             "case_number": "TD-2026-00988",
             "parcel_id": "108415-0340",
             "listing_type": "Tax Deed",
+            "county": "Duval",
             "address": "13425 Yellow Bluff Rd",
             "city": "Jacksonville",
             "state": "FL",
@@ -471,6 +602,7 @@ def get_starter_jacksonville_listings() -> List[Dict]:
             "case_number": "16-2025-CA-006588",
             "parcel_id": "137920-0080",
             "listing_type": "Foreclosure",
+            "county": "Duval",
             "address": "7418 Touchton Rd E",
             "city": "Jacksonville",
             "state": "FL",
@@ -498,6 +630,7 @@ def get_starter_jacksonville_listings() -> List[Dict]:
             "case_number": "16-2025-CA-007412",
             "parcel_id": "167990-0810",
             "listing_type": "Foreclosure",
+            "county": "Duval",
             "address": "4115 Glen Kernan Pkwy E",
             "city": "Jacksonville",
             "state": "FL",
@@ -521,11 +654,236 @@ def get_starter_jacksonville_listings() -> List[Dict]:
             "notes": "Executive home near Hodges Blvd & Butler corridor; strong resale comps.",
             "status": "Upcoming",
         },
+        # ==================== ST. JOHNS COUNTY ====================
+        {
+            "case_number": "55-2025-CA-000842",
+            "parcel_id": "068041-1290",
+            "listing_type": "Foreclosure",
+            "county": "St. Johns",
+            "address": "248 Coastal Ridge Blvd",
+            "city": "Ponte Vedra",
+            "state": "FL",
+            "zip_code": "32081",
+            "neighborhood": "Nocatee / Coastal Oaks",
+            "lat": 30.1082,
+            "lng": -81.4264,
+            "auction_date": today + timedelta(days=5),
+            "opening_bid": 442000.0,
+            "judgment_amount": 451800.0,
+            "assessed_value": 612000.0,
+            "estimated_market_value": 715000.0,
+            "beds": 4,
+            "baths": 3.5,
+            "sqft": 2790,
+            "lot_sqft": 8400,
+            "year_built": 2018,
+            "property_use": "Single Family",
+            "plaintiff_or_holder": "U.S. Bank Trust National Association",
+            "is_starred": True,
+            "notes": "Gated Coastal Oaks in Nocatee; full Splash Waterpark CDD access. Rare 38% equity spread in A+ school zone.",
+            "status": "Bid Ready",
+        },
+        {
+            "case_number": "55-2025-CA-000918",
+            "parcel_id": "061920-0440",
+            "listing_type": "Foreclosure",
+            "county": "St. Johns",
+            "address": "142 Solano Cay Cir",
+            "city": "Ponte Vedra Beach",
+            "state": "FL",
+            "zip_code": "32082",
+            "neighborhood": "Ponte Vedra Beach / Sawgrass",
+            "lat": 30.1945,
+            "lng": -81.3912,
+            "auction_date": today + timedelta(days=8),
+            "opening_bid": 565000.0,
+            "judgment_amount": 578400.0,
+            "assessed_value": 785000.0,
+            "estimated_market_value": 925000.0,
+            "beds": 4,
+            "baths": 3.0,
+            "sqft": 2610,
+            "lot_sqft": 9800,
+            "year_built": 1999,
+            "property_use": "Single Family",
+            "plaintiff_or_holder": "Citibank, N.A., as Trustee for CMLTI",
+            "is_starred": True,
+            "notes": "East of A1A proximity near Sawgrass Village; $360k gross spread before light coastal modernization.",
+            "status": "Bid Ready",
+        },
+        {
+            "case_number": "55-2025-CA-001054",
+            "parcel_id": "009842-2150",
+            "listing_type": "Foreclosure",
+            "county": "St. Johns",
+            "address": "1189Durbin Parke Dr",
+            "city": "St. Johns",
+            "state": "FL",
+            "zip_code": "32259",
+            "neighborhood": "Julington Creek / Durbin Crossing",
+            "lat": 30.0942,
+            "lng": -81.5688,
+            "auction_date": today + timedelta(days=10),
+            "opening_bid": 348000.0,
+            "judgment_amount": 356200.0,
+            "assessed_value": 472000.0,
+            "estimated_market_value": 559000.0,
+            "beds": 4,
+            "baths": 3.0,
+            "sqft": 2540,
+            "lot_sqft": 7900,
+            "year_built": 2014,
+            "property_use": "Single Family",
+            "plaintiff_or_holder": "Nationstar Mortgage LLC",
+            "is_starred": True,
+            "notes": "Zoned for Creekside High School; 5 mins to Durbin Park Town Center.",
+            "status": "Reviewing",
+        },
+        {
+            "case_number": "55-2025-CA-001129",
+            "parcel_id": "028810-0890",
+            "listing_type": "Foreclosure",
+            "county": "St. Johns",
+            "address": "384 SilverLeaf Pkwy",
+            "city": "St. Augustine",
+            "state": "FL",
+            "zip_code": "32092",
+            "neighborhood": "World Golf Village / SilverLeaf",
+            "lat": 29.9835,
+            "lng": -81.4910,
+            "auction_date": today + timedelta(days=12),
+            "opening_bid": 312000.0,
+            "judgment_amount": 319500.0,
+            "assessed_value": 418000.0,
+            "estimated_market_value": 485000.0,
+            "beds": 4,
+            "baths": 2.5,
+            "sqft": 2280,
+            "lot_sqft": 6800,
+            "year_built": 2021,
+            "property_use": "Single Family",
+            "plaintiff_or_holder": "Rocket Mortgage, LLC",
+            "is_starred": False,
+            "notes": "Nearly new 2021 construction in SilverLeaf (no CDD fee!); turnkey flip or high-cashflow family rental.",
+            "status": "Upcoming",
+        },
+        {
+            "case_number": "55-2025-CA-001204",
+            "parcel_id": "072415-0330",
+            "listing_type": "Foreclosure",
+            "county": "St. Johns",
+            "address": "618 Market St",
+            "city": "St. Augustine",
+            "state": "FL",
+            "zip_code": "32095",
+            "neighborhood": "Palencia / Kensington",
+            "lat": 29.9958,
+            "lng": -81.3712,
+            "auction_date": today + timedelta(days=15),
+            "opening_bid": 359000.0,
+            "judgment_amount": 368000.0,
+            "assessed_value": 468000.0,
+            "estimated_market_value": 545000.0,
+            "beds": 4,
+            "baths": 3.0,
+            "sqft": 2490,
+            "lot_sqft": 8100,
+            "year_built": 2011,
+            "property_use": "Single Family",
+            "plaintiff_or_holder": "Wells Fargo Bank, N.A.",
+            "is_starred": False,
+            "notes": "Palencia golf & village community along US-1 North.",
+            "status": "Upcoming",
+        },
+        {
+            "case_number": "TD-55-2026-00314",
+            "parcel_id": "164920-0040",
+            "listing_type": "Tax Deed",
+            "county": "St. Johns",
+            "address": "412 B St",
+            "city": "St. Augustine Beach",
+            "state": "FL",
+            "zip_code": "32080",
+            "neighborhood": "St. Augustine Beach / Anastasia Island",
+            "lat": 29.8482,
+            "lng": -81.2675,
+            "auction_date": today + timedelta(days=7),
+            "opening_bid": 289000.0,
+            "judgment_amount": 289000.0,
+            "assessed_value": 524000.0,
+            "estimated_market_value": 648000.0,
+            "beds": 3,
+            "baths": 2.0,
+            "sqft": 1680,
+            "lot_sqft": 6500,
+            "year_built": 1984,
+            "property_use": "Single Family",
+            "plaintiff_or_holder": "Anastasia Tax Lien Holdings LLC (Cert #2023-01842)",
+            "is_starred": True,
+            "notes": "4 blocks to the beach on Anastasia Island! Short-term vacation rental eligible zone; 55% equity margin.",
+            "status": "Bid Ready",
+        },
+        {
+            "case_number": "TD-55-2026-00349",
+            "parcel_id": "119402-0000",
+            "listing_type": "Tax Deed",
+            "county": "St. Johns",
+            "address": "94 MLK Ave",
+            "city": "St. Augustine",
+            "state": "FL",
+            "zip_code": "32084",
+            "neighborhood": "Historic St. Augustine / Lincolnville",
+            "lat": 29.8878,
+            "lng": -81.3168,
+            "auction_date": today + timedelta(days=9),
+            "opening_bid": 168000.0,
+            "judgment_amount": 168000.0,
+            "assessed_value": 345000.0,
+            "estimated_market_value": 439000.0,
+            "beds": 3,
+            "baths": 2.0,
+            "sqft": 1640,
+            "lot_sqft": 5200,
+            "year_built": 1922,
+            "property_use": "Single Family",
+            "plaintiff_or_holder": "FL Tax Certificate Fund IV",
+            "is_starred": True,
+            "notes": "Historic Lincolnville cottage walkable to Flagler College & St. George St.",
+            "status": "Reviewing",
+        },
+        {
+            "case_number": "55-2025-CA-001312",
+            "parcel_id": "184210-0190",
+            "listing_type": "Foreclosure",
+            "county": "St. Johns",
+            "address": "524 Shore Dr",
+            "city": "St. Augustine",
+            "state": "FL",
+            "zip_code": "32086",
+            "neighborhood": "St. Augustine South",
+            "lat": 29.8395,
+            "lng": -81.3112,
+            "auction_date": today + timedelta(days=17),
+            "opening_bid": 224000.0,
+            "judgment_amount": 231400.0,
+            "assessed_value": 318000.0,
+            "estimated_market_value": 379000.0,
+            "beds": 3,
+            "baths": 2.0,
+            "sqft": 1610,
+            "lot_sqft": 10200,
+            "year_built": 1978,
+            "property_use": "Single Family",
+            "plaintiff_or_holder": " Carrington Mortgage Services, LLC",
+            "is_starred": False,
+            "notes": "1 block from Matanzas River boat ramps & intracoastal trail; no HOA.",
+            "status": "Upcoming",
+        },
     ]
 
 
 def seed_database(session: Session, force_refresh: bool = False) -> Dict[str, int]:
-    """Ensure Zillow ZIP trends and Jacksonville starter listings are populated."""
+    """Ensure Zillow ZIP trends and Duval + St. Johns starter listings are populated."""
     zip_added = 0
     zip_updated = 0
     for zdata in get_jacksonville_zip_trends():
@@ -535,7 +893,7 @@ def seed_database(session: Session, force_refresh: bool = False) -> Dict[str, in
         if not existing_zip:
             session.add(ZipTrend(**zdata))
             zip_added += 1
-        elif force_refresh:
+        elif force_refresh or not existing_zip.county:
             for k, v in zdata.items():
                 setattr(existing_zip, k, v)
             session.add(existing_zip)
@@ -543,28 +901,26 @@ def seed_database(session: Session, force_refresh: bool = False) -> Dict[str, in
 
     listings_added = 0
     listings_updated = 0
-    existing_count = len(session.exec(select(ForeclosureListing.id)).all())
 
-    if existing_count == 0 or force_refresh:
-        for item in get_starter_jacksonville_listings():
-            existing = session.exec(
-                select(ForeclosureListing).where(
-                    ForeclosureListing.case_number == item["case_number"]
-                )
-            ).first()
-            if not existing:
-                listing = ForeclosureListing(**item)
-                listing.recalculate_metrics_and_links()
-                session.add(listing)
-                listings_added += 1
-            elif force_refresh:
-                for k, v in item.items():
-                    if k not in ("is_starred", "notes", "status"):
-                        setattr(existing, k, v)
-                existing.updated_at = utc_now()
-                existing.recalculate_metrics_and_links()
-                session.add(existing)
-                listings_updated += 1
+    for item in get_starter_jacksonville_listings():
+        existing = session.exec(
+            select(ForeclosureListing).where(
+                ForeclosureListing.case_number == item["case_number"]
+            )
+        ).first()
+        if not existing:
+            listing = ForeclosureListing(**item)
+            listing.recalculate_metrics_and_links()
+            session.add(listing)
+            listings_added += 1
+        elif force_refresh or not existing.county:
+            for k, v in item.items():
+                if k not in ("is_starred", "notes", "status"):
+                    setattr(existing, k, v)
+            existing.updated_at = utc_now()
+            existing.recalculate_metrics_and_links()
+            session.add(existing)
+            listings_updated += 1
 
     session.commit()
     return {

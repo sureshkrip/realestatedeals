@@ -56,27 +56,52 @@
       <!-- Brand -->
       <div class="flex items-center gap-3">
         <div class="h-10 w-10 rounded-xl bg-emerald-500/15 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold text-lg shadow-inner">
-          JX
+          FL
         </div>
         <div>
           <div class="flex items-center gap-2">
             <h1 class="text-base sm:text-lg font-bold tracking-tight text-white">
-              Jacksonville Foreclosure &amp; Tax Deed Finder
+              NE Florida Foreclosure &amp; Tax Deed Finder
             </h1>
             <span class="hidden md:inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-              Duval County Live Desk
+              Duval &amp; St. Johns Live Desk
             </span>
           </div>
           <p class="text-xs text-slate-400">
-            RealForeclose &bull; RealTaxDeed &bull; Duval Property Appraiser Equity Analyzer
+            Jacksonville (Duval) &bull; Ponte Vedra / Nocatee / St. Augustine (St. Johns County)
           </p>
         </div>
       </div>
 
+      <!-- Prominent County Switcher -->
+      <div class="inline-flex items-center rounded-xl bg-slate-950 p-1 border border-slate-800 text-xs">
+        <button
+          @click="setCounty('all')"
+          :class="filters.county === 'all' ? 'bg-emerald-600 text-white font-bold shadow' : 'text-slate-400 hover:text-slate-200'"
+          class="px-3 py-1.5 rounded-lg transition"
+        >
+          All NE FL (<span x-text="stats.all_counties_total || stats.total_listings"></span>)
+        </button>
+        <button
+          @click="setCounty('Duval')"
+          :class="filters.county === 'Duval' ? 'bg-sky-600 text-white font-bold shadow' : 'text-slate-400 hover:text-slate-200'"
+          class="px-3 py-1.5 rounded-lg transition"
+        >
+          Duval / Jax (<span x-text="stats.duval_count"></span>)
+        </button>
+        <button
+          @click="setCounty('St. Johns')"
+          :class="filters.county === 'St. Johns' ? 'bg-amber-600 text-white font-bold shadow' : 'text-slate-400 hover:text-slate-200'"
+          class="px-3 py-1.5 rounded-lg transition"
+        >
+          St. Johns County (<span x-text="stats.st_johns_count"></span>)
+        </button>
+      </div>
+
       <!-- KPI Strip -->
-      <div class="hidden xl:flex items-center gap-2 bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-1.5">
+      <div class="hidden 2xl:flex items-center gap-2 bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-1.5">
         <div class="px-3 border-r border-slate-800">
-          <div class="text-[10px] uppercase tracking-wider text-slate-400">Active Deals</div>
+          <div class="text-[10px] uppercase tracking-wider text-slate-400">Showing</div>
           <div class="text-sm font-bold text-white" x-text="listings.length + ' / ' + stats.total_listings"></div>
         </div>
         <div class="px-3 border-r border-slate-800">
@@ -142,7 +167,7 @@
         <a
           href="/api/export.csv"
           class="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-950 hover:bg-slate-800 text-slate-300 border border-slate-800 transition"
-          title="Download filtered deals as CSV"
+          title="Download deals as CSV"
         >
           Export CSV
         </a>
@@ -159,7 +184,7 @@
           type="text"
           x-model.debounce.250ms="filters.search"
           @input="fetchListings()"
-          placeholder="Search address, RE#, case #, neighborhood..."
+          placeholder="Search address, RE#, case #, Nocatee, Riverside..."
           class="w-full bg-slate-950 border border-slate-800 focus:border-emerald-500 rounded-lg pl-3 pr-8 py-1.5 text-slate-100 placeholder-slate-500 focus:outline-none"
         />
         <button
@@ -202,9 +227,9 @@
         @change="fetchListings()"
         class="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-emerald-500"
       >
-        <option value="all">All Jacksonville ZIPs</option>
+        <option value="all">All ZIP Codes</option>
         <template x-for="z in stats.zip_trends" :key="z.zip_code">
-          <option :value="z.zip_code" x-text="z.zip_code + ' — ' + z.neighborhood_name + ' (+' + z.yoy_appreciation_pct + '% YoY)'"></option>
+          <option :value="z.zip_code" x-text="'[' + z.county + '] ' + z.zip_code + ' — ' + z.neighborhood_name + ' (+' + z.yoy_appreciation_pct + '% YoY)'"></option>
         </template>
       </select>
 
@@ -215,11 +240,11 @@
         class="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-emerald-500"
       >
         <option value="">Max Opening Bid: Any</option>
-        <option value="125000">Under $125,000</option>
-        <option value="200000">Under $200,000</option>
-        <option value="275000">Under $275,000</option>
+        <option value="150000">Under $150,000</option>
+        <option value="250000">Under $250,000</option>
         <option value="350000">Under $350,000</option>
-        <option value="500000">Under $500,000</option>
+        <option value="450000">Under $450,000</option>
+        <option value="600000">Under $600,000</option>
       </select>
 
       <!-- Min Equity % -->
@@ -296,8 +321,8 @@
     >
       <template x-if="listings.length === 0">
         <div class="text-center py-16 bg-slate-900/40 rounded-2xl border border-slate-800 p-8">
-          <p class="text-slate-300 font-semibold text-sm">No Duval properties match the current filters.</p>
-          <p class="text-slate-500 text-xs mt-1">Try resetting filters or syncing the Duval County dataset.</p>
+          <p class="text-slate-300 font-semibold text-sm">No Duval or St. Johns properties match the current filters.</p>
+          <p class="text-slate-500 text-xs mt-1">Try resetting filters or syncing the county dataset.</p>
           <button
             @click="resetFilters()"
             class="mt-4 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold"
@@ -317,6 +342,11 @@
           <div class="flex items-start justify-between gap-2">
             <div class="flex flex-wrap items-center gap-1.5">
               <span
+                :class="deal.county === 'St. Johns' ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-sky-500/20 text-sky-300 border-sky-500/40'"
+                class="px-2 py-0.5 rounded-md text-[11px] font-bold border"
+                x-text="deal.county + ' County'"
+              ></span>
+              <span
                 :class="deal.listing_type === 'Tax Deed' ? 'bg-purple-500/20 text-purple-300 border-purple-500/40' : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40'"
                 class="px-2 py-0.5 rounded-md text-[11px] font-semibold border"
                 x-text="deal.listing_type"
@@ -327,7 +357,7 @@
               ></span>
               <template x-if="deal.zip_yoy_pct">
                 <span
-                  class="px-2 py-0.5 rounded-md text-[11px] font-medium bg-amber-500/10 text-amber-300 border border-amber-500/30"
+                  class="px-2 py-0.5 rounded-md text-[11px] font-medium bg-emerald-500/10 text-emerald-300 border border-emerald-500/30"
                   x-text="'🔥 ZIP +' + deal.zip_yoy_pct + '% YoY'"
                 ></span>
               </template>
@@ -353,7 +383,7 @@
               <p class="text-xs text-slate-400">
                 <span class="text-slate-300 font-medium" x-text="deal.neighborhood"></span>
                 &bull; <span x-text="deal.city + ', FL ' + deal.zip_code"></span>
-                &bull; <span class="font-mono text-[11px] text-slate-400" x-text="'RE# ' + deal.parcel_id"></span>
+                &bull; <span class="font-mono text-[11px] text-slate-400" x-text="'Parcel# ' + deal.parcel_id"></span>
               </p>
             </div>
             <div class="text-right shrink-0">
@@ -434,6 +464,7 @@
           <thead>
             <tr class="bg-slate-900 border-b border-slate-800 text-[11px] uppercase tracking-wider text-slate-400">
               <th class="py-3 px-3">★</th>
+              <th class="py-3 px-3">County</th>
               <th class="py-3 px-3">Type / Case #</th>
               <th class="py-3 px-3">Address &amp; Neighborhood</th>
               <th class="py-3 px-3">ZIP Trend</th>
@@ -462,17 +493,24 @@
                   </button>
                 </td>
                 <td class="py-2.5 px-3">
+                  <span
+                    :class="deal.county === 'St. Johns' ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-sky-500/20 text-sky-300 border-sky-500/40'"
+                    class="px-2 py-0.5 rounded text-[11px] font-bold border"
+                    x-text="deal.county"
+                  ></span>
+                </td>
+                <td class="py-2.5 px-3">
                   <div class="font-semibold text-white" x-text="deal.listing_type"></div>
                   <div class="font-mono text-[11px] text-slate-400" x-text="deal.case_number"></div>
                 </td>
                 <td class="py-2.5 px-3">
                   <div class="font-bold text-slate-100" x-text="deal.address"></div>
-                  <div class="text-slate-400" x-text="deal.neighborhood + ' (' + deal.zip_code + ') • RE# ' + deal.parcel_id"></div>
+                  <div class="text-slate-400" x-text="deal.neighborhood + ' (' + deal.city + ' ' + deal.zip_code + ') • Parcel# ' + deal.parcel_id"></div>
                 </td>
                 <td class="py-2.5 px-3">
                   <span
                     x-show="deal.zip_yoy_pct"
-                    class="px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/30 font-medium"
+                    class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 font-medium"
                     x-text="'+' + deal.zip_yoy_pct + '% YoY'"
                   ></span>
                 </td>
@@ -501,7 +539,7 @@
       </div>
     </div>
 
-    <!-- JACKSONVILLE ZIP TRENDS VIEW -->
+    <!-- NE FLORIDA ZIP TRENDS VIEW -->
     <div
       x-cloak
       x-show="viewMode === 'zips'"
@@ -510,8 +548,8 @@
       <div class="max-w-6xl mx-auto">
         <div class="flex items-center justify-between mb-4">
           <div>
-            <h2 class="text-lg font-bold text-white">Jacksonville Neighborhood Appreciation &amp; ZHVI Baseline</h2>
-            <p class="text-xs text-slate-400">Click any ZIP code card to filter Duval foreclosure &amp; tax-deed deals in that corridor.</p>
+            <h2 class="text-lg font-bold text-white">Duval &amp; St. Johns Neighborhood Appreciation &amp; ZHVI Baseline</h2>
+            <p class="text-xs text-slate-400">Click any ZIP code card to filter foreclosure &amp; tax-deed deals in that corridor.</p>
           </div>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -521,7 +559,14 @@
               class="rounded-xl border border-slate-800 bg-slate-900/70 hover:border-emerald-500/60 p-4 cursor-pointer transition"
             >
               <div class="flex items-center justify-between">
-                <span class="text-base font-extrabold text-white" x-text="'ZIP ' + z.zip_code"></span>
+                <div class="flex items-center gap-2">
+                  <span class="text-base font-extrabold text-white" x-text="'ZIP ' + z.zip_code"></span>
+                  <span
+                    :class="z.county === 'St. Johns' ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-sky-500/20 text-sky-300 border-sky-500/40'"
+                    class="px-2 py-0.5 rounded text-[10px] font-bold border"
+                    x-text="z.county"
+                  ></span>
+                </div>
                 <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30" x-text="'+' + z.yoy_appreciation_pct + '% YoY'"></span>
               </div>
               <div class="text-sm font-semibold text-slate-200 mt-1" x-text="z.neighborhood_name"></div>
@@ -592,6 +637,11 @@
             <div>
               <div class="flex items-center gap-2">
                 <span
+                  :class="selectedDeal.county === 'St. Johns' ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-sky-500/20 text-sky-300 border-sky-500/40'"
+                  class="px-2.5 py-0.5 rounded text-xs font-bold border"
+                  x-text="selectedDeal.county + ' County'"
+                ></span>
+                <span
                   :class="selectedDeal.listing_type === 'Tax Deed' ? 'bg-purple-500/20 text-purple-300 border-purple-500/40' : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40'"
                   class="px-2.5 py-0.5 rounded text-xs font-bold border"
                   x-text="selectedDeal.listing_type"
@@ -599,7 +649,7 @@
                 <span class="font-mono text-xs text-slate-400" x-text="selectedDeal.case_number"></span>
               </div>
               <h2 class="text-xl font-bold text-white mt-1" x-text="selectedDeal.address"></h2>
-              <p class="text-xs text-slate-400" x-text="selectedDeal.neighborhood + ' • ' + selectedDeal.city + ', FL ' + selectedDeal.zip_code + ' • RE# ' + selectedDeal.parcel_id"></p>
+              <p class="text-xs text-slate-400" x-text="selectedDeal.neighborhood + ' • ' + selectedDeal.city + ', FL ' + selectedDeal.zip_code + ' • Parcel# ' + selectedDeal.parcel_id"></p>
             </div>
             <button
               @click="drawerOpen = false"
@@ -679,7 +729,7 @@
 
           <div class="text-xs text-slate-400 bg-slate-950 border border-slate-800 rounded-lg p-3">
             <span class="text-slate-500 uppercase text-[10px] block">Plaintiff / Certificate Holder</span>
-            <span class="text-slate-200 font-medium" x-text="selectedDeal.plaintiff_or_holder || 'Duval County Clerk Record'"></span>
+            <span class="text-slate-200 font-medium" x-text="selectedDeal.plaintiff_or_holder || (selectedDeal.county + ' County Clerk Record')"></span>
           </div>
 
           <!-- Official 1-Click Links -->
@@ -692,7 +742,7 @@
                 rel="noopener"
                 class="flex items-center justify-between px-3 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-100 font-medium transition"
               >
-                <span>Duval Property Appraiser</span>
+                <span x-text="selectedDeal.county + ' Property Appraiser'"></span>
                 <span>&#8599;</span>
               </a>
               <a
@@ -701,7 +751,7 @@
                 rel="noopener"
                 class="flex items-center justify-between px-3 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-100 font-medium transition"
               >
-                <span>Duval Clerk CORE Docket</span>
+                <span x-text="selectedDeal.county + ' Clerk Docket'"></span>
                 <span>&#8599;</span>
               </a>
               <a
@@ -746,7 +796,7 @@
               <textarea
                 rows="4"
                 x-model="selectedDeal.notes"
-                placeholder="Record municipal lien findings, roof permit year, rehab estimate, max bid ceiling..."
+                placeholder="Record municipal lien findings, CDD/HOA fees, roof permit year, rehab estimate..."
                 class="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-xs text-slate-100 focus:outline-none focus:border-emerald-500"
               ></textarea>
             </div>
@@ -784,7 +834,7 @@
     >
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
         <div>
-          <h3 class="text-base font-bold text-white">Sync &amp; Import Duval County Deals</h3>
+          <h3 class="text-base font-bold text-white">Sync &amp; Import Duval + St. Johns Deals</h3>
           <p class="text-xs text-slate-400">Populate or update PostgreSQL listings via 1-Click Sync or CSV/JSON upload.</p>
         </div>
         <button @click="showSyncModal = false" class="text-slate-400 hover:text-white text-xl">&times;</button>
@@ -793,9 +843,9 @@
       <!-- 1-Click Sync -->
       <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 flex items-center justify-between gap-4">
         <div>
-          <div class="text-xs font-bold text-white">1-Click Duval County Feed &amp; ZIP Baseline Sync</div>
+          <div class="text-xs font-bold text-white">1-Click Duval &amp; St. Johns County Feed Sync</div>
           <p class="text-[11px] text-slate-400 mt-0.5">
-            Refreshes Jacksonville foreclosure &amp; tax-deed starter listings and Zillow ZHVI neighborhood trends.
+            Refreshes Jacksonville (Duval) and Ponte Vedra / Nocatee / St. Augustine (St. Johns) foreclosure &amp; tax-deed listings and ZHVI neighborhood trends.
           </p>
         </div>
         <button
@@ -811,7 +861,7 @@
       <form @submit.prevent="uploadFile" class="space-y-3 bg-slate-950 border border-slate-800 rounded-xl p-4">
         <div class="text-xs font-bold text-white">Upload CSV or JSON Spreadsheet</div>
         <p class="text-[11px] text-slate-400">
-          Supports exports from <code class="text-slate-300">duval.realforeclose.com</code>, <code class="text-slate-300">duval.realtaxdeed.com</code>, or custom spreadsheets. Auto-upserts by <code class="text-emerald-300">case_number</code> or <code class="text-emerald-300">parcel_id</code>.
+          Supports exports from <code class="text-slate-300">duval.realforeclose.com</code>, <code class="text-slate-300">saintjohns.realforeclose.com</code>, <code class="text-slate-300">realtaxdeed.com</code>, or custom spreadsheets. Auto-detects county by ZIP or case number.
         </p>
         <input
           type="file"
@@ -844,11 +894,18 @@
       class="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-2xl"
     >
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-        <h3 class="text-base font-bold text-white">Add Jacksonville Foreclosure / Tax Deed</h3>
+        <h3 class="text-base font-bold text-white">Add Duval / St. Johns Deal</h3>
         <button @click="showAddModal = false" class="text-slate-400 hover:text-white text-xl">&times;</button>
       </div>
 
       <form @submit.prevent="createManualDeal()" class="grid grid-cols-2 gap-3 text-xs">
+        <div>
+          <label class="text-slate-400 block mb-1">County</label>
+          <select x-model="newDeal.county" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white">
+            <option value="Duval">Duval County (Jacksonville)</option>
+            <option value="St. Johns">St. Johns County</option>
+          </select>
+        </div>
         <div>
           <label class="text-slate-400 block mb-1">Listing Type</label>
           <select x-model="newDeal.listing_type" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white">
@@ -858,19 +915,23 @@
         </div>
         <div>
           <label class="text-slate-400 block mb-1">Case / Certificate # *</label>
-          <input type="text" required x-model="newDeal.case_number" placeholder="16-2026-CA-001234" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white" />
+          <input type="text" required x-model="newDeal.case_number" placeholder="55-2026-CA-000123" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white" />
+        </div>
+        <div>
+          <label class="text-slate-400 block mb-1">Parcel ID</label>
+          <input type="text" x-model="newDeal.parcel_id" placeholder="068041-1290" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white" />
         </div>
         <div class="col-span-2">
           <label class="text-slate-400 block mb-1">Street Address *</label>
-          <input type="text" required x-model="newDeal.address" placeholder="1234 Oak St" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white" />
+          <input type="text" required x-model="newDeal.address" placeholder="248 Coastal Ridge Blvd" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white" />
+        </div>
+        <div>
+          <label class="text-slate-400 block mb-1">City</label>
+          <input type="text" x-model="newDeal.city" placeholder="Ponte Vedra / Jacksonville" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white" />
         </div>
         <div>
           <label class="text-slate-400 block mb-1">ZIP Code *</label>
-          <input type="text" required x-model="newDeal.zip_code" placeholder="32204" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white" />
-        </div>
-        <div>
-          <label class="text-slate-400 block mb-1">Duval Parcel RE#</label>
-          <input type="text" x-model="newDeal.parcel_id" placeholder="074512-0000" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white" />
+          <input type="text" required x-model="newDeal.zip_code" placeholder="32081" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white" />
         </div>
         <div>
           <label class="text-slate-400 block mb-1">Opening Bid ($) *</label>
@@ -886,7 +947,7 @@
         </div>
         <div>
           <label class="text-slate-400 block mb-1">SqFt</label>
-          <input type="number" x-model.number="newDeal.sqft" placeholder="1750" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white" />
+          <input type="number" x-model.number="newDeal.sqft" placeholder="2150" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white" />
         </div>
         <div class="col-span-2">
           <label class="text-slate-400 block mb-1">Notes</label>
@@ -907,6 +968,9 @@
         listings: [],
         stats: {
           total_listings: 0,
+          all_counties_total: 0,
+          duval_count: 0,
+          st_johns_count: 0,
           high_equity_count: 0,
           starred_count: 0,
           foreclosure_count: 0,
@@ -918,6 +982,7 @@
           zip_trends: [],
         },
         filters: {
+          county: 'all',
           search: '',
           listing_type: 'all',
           zip_code: 'all',
@@ -939,10 +1004,12 @@
         showZipCircles: false,
         markerById: {},
         newDeal: {
+          county: 'Duval',
           listing_type: 'Foreclosure',
           case_number: '',
           parcel_id: '',
           address: '',
+          city: 'Jacksonville',
           zip_code: '32204',
           opening_bid: 185000,
           estimated_market_value: 295000,
@@ -958,8 +1025,8 @@
 
         initMap() {
           this.map = L.map('jax-map', {
-            center: [30.312, -81.62],
-            zoom: 11,
+            center: [30.15, -81.52],
+            zoom: 10,
             zoomControl: true,
           });
 
@@ -972,8 +1039,18 @@
           this.zipCirclesLayer = L.layerGroup();
         },
 
+        async setCounty(county) {
+          this.filters.county = county;
+          this.filters.zip_code = 'all';
+          await Promise.all([this.fetchStats(), this.fetchListings()]);
+        },
+
         async fetchStats() {
-          const res = await fetch('/api/stats');
+          const params = new URLSearchParams();
+          if (this.filters.county && this.filters.county !== 'all') {
+            params.set('county', this.filters.county);
+          }
+          const res = await fetch('/api/stats?' + params.toString());
           if (res.ok) {
             this.stats = await res.json();
             this.renderZipOverlay();
@@ -982,6 +1059,7 @@
 
         async fetchListings() {
           const params = new URLSearchParams();
+          if (this.filters.county !== 'all') params.set('county', this.filters.county);
           if (this.filters.search) params.set('search', this.filters.search);
           if (this.filters.listing_type !== 'all') params.set('listing_type', this.filters.listing_type);
           if (this.filters.zip_code !== 'all') params.set('zip_code', this.filters.zip_code);
@@ -1026,7 +1104,7 @@
               this.openDrawer(deal);
             });
             marker.bindTooltip(
-              `<strong>${deal.address}</strong><br/>${deal.listing_type} &bull; Equity: +$${Math.round(deal.estimated_equity_dollars).toLocaleString()} (${deal.estimated_equity_pct}%)`,
+              `<strong>[${deal.county}] ${deal.address}</strong><br/>${deal.listing_type} &bull; Equity: +$${Math.round(deal.estimated_equity_dollars).toLocaleString()} (${deal.estimated_equity_pct}%)`,
               { direction: 'top', offset: [0, -10] }
             );
             this.markersLayer.addLayer(marker);
@@ -1047,13 +1125,13 @@
           (this.stats.zip_trends || []).forEach((z) => {
             const circle = L.circle([z.lat, z.lng], {
               radius: 2600,
-              color: '#f59e0b',
+              color: z.county === 'St. Johns' ? '#f59e0b' : '#38bdf8',
               weight: 1.5,
               fillColor: '#10b981',
               fillOpacity: 0.14,
             });
             circle.bindTooltip(
-              `<strong>ZIP ${z.zip_code} (${z.neighborhood_name})</strong><br/>YoY Appreciation: +${z.yoy_appreciation_pct}%<br/>Median ZHVI: $${Math.round(z.zhvi_median_value).toLocaleString()} ($${z.median_price_sqft}/sqft)`
+              `<strong>[${z.county}] ZIP ${z.zip_code} (${z.neighborhood_name})</strong><br/>YoY Appreciation: +${z.yoy_appreciation_pct}%<br/>Median ZHVI: $${Math.round(z.zhvi_median_value).toLocaleString()} ($${z.median_price_sqft}/sqft)`
             );
             this.zipCirclesLayer.addLayer(circle);
           });
@@ -1134,7 +1212,7 @@
               const data = await res.json();
               await Promise.all([this.fetchStats(), this.fetchListings()]);
               this.showSyncModal = false;
-              this.showToast(`Synced Duval County feed (${data.total_listings} deals active).`);
+              this.showToast(`Synced Duval & St. Johns feed (${data.total_listings} deals active).`);
             }
           } finally {
             this.isSyncing = false;
@@ -1180,6 +1258,7 @@
 
         resetFilters() {
           this.filters = {
+            county: 'all',
             search: '',
             listing_type: 'all',
             zip_code: 'all',
@@ -1188,7 +1267,7 @@
             sort_by: 'equity_desc',
             starred_only: false,
           };
-          this.fetchListings();
+          Promise.all([this.fetchStats(), this.fetchListings()]);
         },
 
         formatMoney(val) {

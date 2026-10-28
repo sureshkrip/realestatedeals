@@ -4,6 +4,18 @@ from urllib.parse import quote_plus
 from sqlmodel import Field, SQLModel
 
 
+ST_JOHNS_ZIPS = {
+    "32080",
+    "32081",
+    "32082",
+    "32084",
+    "32086",
+    "32092",
+    "32095",
+    "32259",
+}
+
+
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
@@ -15,6 +27,7 @@ class ForeclosureListing(SQLModel, table=True):
     case_number: str = Field(index=True, unique=True)
     parcel_id: str = Field(index=True)
     listing_type: str = Field(default="Foreclosure", index=True)  # "Foreclosure" | "Tax Deed"
+    county: str = Field(default="Duval", index=True)  # "Duval" | "St. Johns"
 
     # Location
     address: str
@@ -55,13 +68,13 @@ class ForeclosureListing(SQLModel, table=True):
     is_starred: bool = Field(default=False, index=True)
     notes: str = Field(default="")
     status: str = Field(default="Upcoming", index=True)  # Upcoming | Reviewing | Bid Ready | Sold | Canceled
-    source: str = Field(default="Duval County Official Feed")
+    source: str = Field(default="County Official Feed")
 
     created_at: datetime = Field(default_factory=utc_now)
     updated_at: datetime = Field(default_factory=utc_now)
 
     def recalculate_metrics_and_links(self) -> None:
-        """Compute estimated equity ($ and %) and populate official Duval links if missing."""
+        """Compute estimated equity ($ and %) and populate official Duval or St. Johns links."""
         if self.estimated_market_value and self.estimated_market_value > 0:
             self.estimated_equity_dollars = round(self.estimated_market_value - (self.opening_bid or 0.0), 2)
             self.estimated_equity_pct = round(
@@ -71,26 +84,42 @@ class ForeclosureListing(SQLModel, table=True):
             self.estimated_equity_dollars = 0.0
             self.estimated_equity_pct = 0.0
 
+        if not self.county or self.zip_code in ST_JOHNS_ZIPS:
+            if self.zip_code in ST_JOHNS_ZIPS:
+                self.county = "St. Johns"
+            elif not self.county:
+                self.county = "Duval"
+
         clean_re = (self.parcel_id or "").replace("-", "").strip()
-        if not self.pa_parcel_url and clean_re:
+        is_sjc = self.county.lower().startswith("st")
+
+        if is_sjc:
+            self.pa_parcel_url = (
+                f"https://qpublic.schneidercorp.com/Application.aspx?AppID=960&LayerID=19106&PageTypeID=4&KeyValue={clean_re}"
+                if clean_re
+                else "https://www.sjcpa.us/parcel-search/"
+            )
+            self.clerk_case_url = "https://apps.stjohnsclerk.com/Benchmark/Home.aspx/Search"
+            if self.listing_type.lower() == "tax deed":
+                self.auction_portal_url = "https://saintjohns.realtaxdeed.com/"
+            else:
+                self.auction_portal_url = "https://saintjohns.realforeclose.com/"
+        else:
             self.pa_parcel_url = (
                 f"https://paopropertysearch.coj.net/Basic/Detail.aspx?RE={clean_re}"
+                if clean_re
+                else "https://paopropertysearch.coj.net/"
             )
-
-        if not self.clerk_case_url:
             self.clerk_case_url = "https://core.duvalclerk.com/"
-
-        if not self.auction_portal_url:
             if self.listing_type.lower() == "tax deed":
                 self.auction_portal_url = "https://duval.realtaxdeed.com/"
             else:
                 self.auction_portal_url = "https://duval.realforeclose.com/"
 
-        if not self.street_view_url:
-            full_addr = f"{self.address}, {self.city}, {self.state} {self.zip_code}"
-            self.street_view_url = (
-                f"https://www.google.com/maps/search/?api=1&query={quote_plus(full_addr)}"
-            )
+        full_addr = f"{self.address}, {self.city}, {self.state} {self.zip_code}"
+        self.street_view_url = (
+            f"https://www.google.com/maps/search/?api=1&query={quote_plus(full_addr)}"
+        )
 
 
 class ZipTrend(SQLModel, table=True):
@@ -98,6 +127,7 @@ class ZipTrend(SQLModel, table=True):
 
     id: Optional[int] = Field(default=None, primary_key=True)
     zip_code: str = Field(index=True, unique=True)
+    county: str = Field(default="Duval", index=True)
     neighborhood_name: str
     zhvi_median_value: float = Field(default=0.0)
     yoy_appreciation_pct: float = Field(default=0.0)

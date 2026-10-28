@@ -5,12 +5,13 @@ import re
 from datetime import date, datetime
 from typing import Any, Dict, List, Optional, Tuple
 from sqlmodel import Session, select
-from app.models import ForeclosureListing, ZipTrend, utc_now
+from app.models import ST_JOHNS_ZIPS, ForeclosureListing, ZipTrend, utc_now
 from app.services.seed import seed_database
 
 
-# Default coordinates per Jacksonville ZIP when imported CSV rows lack lat/lng
+# Default coordinates per Duval & St. Johns ZIP when imported CSV rows lack lat/lng
 JAX_ZIP_COORDS: Dict[str, Tuple[float, float, str]] = {
+    # Duval County
     "32202": (30.3275, -81.6566, "Downtown Jacksonville"),
     "32204": (30.3135, -81.6820, "Riverside / Five Points"),
     "32205": (30.3036, -81.7145, "Avondale / Murray Hill"),
@@ -36,6 +37,15 @@ JAX_ZIP_COORDS: Dict[str, Tuple[float, float, str]] = {
     "32258": (30.1380, -81.5450, "Bartram Park / Julington Creek"),
     "32266": (30.3140, -81.3980, "Neptune Beach"),
     "32277": (30.3690, -81.5880, "Fort Caroline / University Club"),
+    # St. Johns County
+    "32080": (29.8520, -81.2690, "St. Augustine Beach / Anastasia Island"),
+    "32081": (30.1045, -81.4310, "Nocatee / Ponte Vedra"),
+    "32082": (30.1982, -81.3885, "Ponte Vedra Beach / Sawgrass"),
+    "32084": (29.8947, -81.3145, "Historic St. Augustine / Lincolnville"),
+    "32086": (29.8260, -81.3240, "St. Augustine South / Shores"),
+    "32092": (29.9780, -81.4820, "World Golf Village / SilverLeaf"),
+    "32095": (29.9920, -81.3690, "Palencia / North St. Augustine"),
+    "32259": (30.0890, -81.5940, "St. Johns / Julington Creek"),
 }
 
 
@@ -83,12 +93,12 @@ def _pick(row: Dict[str, Any], keys: List[str], default: Any = None) -> Any:
 
 
 def normalize_record(raw: Dict[str, Any], index_offset: int = 1) -> Dict[str, Any]:
-    """Normalize an arbitrary CSV/JSON row from Duval Clerk, RealForeclose, RealTaxDeed, or PAO."""
+    """Normalize an arbitrary CSV/JSON row from Duval or St. Johns Clerk, RealForeclose, RealTaxDeed, or PAO."""
     case_number = str(
         _pick(
             raw,
             ["case_number", "case_num", "case", "case_id", "certificate_number", "tax_deed_number"],
-            default=f"DUVAL-IMP-{index_offset:04d}",
+            default=f"NEFL-IMP-{index_offset:04d}",
         )
     ).strip()
 
@@ -109,14 +119,23 @@ def normalize_record(raw: Dict[str, Any], index_offset: int = 1) -> Dict[str, An
         _pick(raw, ["address", "property_address", "street_address", "site_address", "location"], default="Unknown Address")
     ).strip()
 
-    city = str(_pick(raw, ["city", "property_city"], default="Jacksonville")).strip()
-    state = str(_pick(raw, ["state", "property_state"], default="FL")).strip()
     zip_code = str(_pick(raw, ["zip_code", "zip", "postal_code", "property_zip"], default="32204")).strip()[:5]
 
+    raw_county = str(_pick(raw, ["county", "county_name"], default="")).strip()
+    if "johns" in raw_county.lower() or zip_code in ST_JOHNS_ZIPS or case_number.startswith("55-"):
+        county = "St. Johns"
+        default_city = "St. Augustine"
+    else:
+        county = "Duval"
+        default_city = "Jacksonville"
+
+    city = str(_pick(raw, ["city", "property_city"], default=default_city)).strip()
+    state = str(_pick(raw, ["state", "property_state"], default="FL")).strip()
+
     default_lat, default_lng, default_nbhd = JAX_ZIP_COORDS.get(
-        zip_code, (30.3322, -81.6557, "Duval County")
+        zip_code,
+        (29.95, -81.38, "St. Johns County") if county == "St. Johns" else (30.3322, -81.6557, "Duval County"),
     )
-    # Apply small deterministic offset from case_number hash so pins in same ZIP don't stack identically
     jitter = ((sum(ord(c) for c in case_number) % 40) - 20) * 0.0004
 
     lat = _clean_currency(_pick(raw, ["lat", "latitude"])) or round(default_lat + jitter, 6)
@@ -139,6 +158,7 @@ def normalize_record(raw: Dict[str, Any], index_offset: int = 1) -> Dict[str, An
         "case_number": case_number,
         "parcel_id": parcel_id,
         "listing_type": listing_type,
+        "county": county,
         "address": address,
         "city": city,
         "state": state,
@@ -215,7 +235,7 @@ def import_file_bytes(session: Session, filename: str, content: bytes) -> Dict[s
 
 
 def sync_duval_feed(session: Session) -> Dict[str, Any]:
-    """Run the 1-click Duval Foreclosure / Tax Deed & ZIP baseline sync."""
+    """Run the 1-click Duval & St. Johns County Foreclosure / Tax Deed & ZIP baseline sync."""
     result = seed_database(session, force_refresh=True)
     total_listings = len(session.exec(select(ForeclosureListing.id)).all())
     total_zips = len(session.exec(select(ZipTrend.id)).all())

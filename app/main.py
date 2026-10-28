@@ -3,7 +3,7 @@ import io
 from contextlib import asynccontextmanager
 from datetime import date
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, StreamingResponse
@@ -32,7 +32,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title=settings.app_name,
-    version="1.0.0",
+    version="1.1.0",
     lifespan=lifespan,
 )
 
@@ -49,6 +49,7 @@ class ManualListingPayload(BaseModel):
     case_number: str
     parcel_id: str = "000000-0000"
     listing_type: str = "Foreclosure"
+    county: str = "Duval"
     address: str
     city: str = "Jacksonville"
     zip_code: str = "32204"
@@ -111,6 +112,7 @@ def health_check(session: Session = Depends(get_session)):
 
 @app.get("/api/listings")
 def list_foreclosures(
+    county: Optional[str] = None,
     listing_type: Optional[str] = None,
     max_opening_bid: Optional[float] = None,
     min_equity_pct: Optional[float] = None,
@@ -126,6 +128,8 @@ def list_foreclosures(
 ):
     stmt = select(ForeclosureListing)
 
+    if county and county.lower() != "all":
+        stmt = stmt.where(ForeclosureListing.county == county)
     if listing_type and listing_type.lower() != "all":
         stmt = stmt.where(ForeclosureListing.listing_type == listing_type)
     if max_opening_bid is not None and max_opening_bid > 0:
@@ -152,6 +156,7 @@ def list_foreclosures(
             | col(ForeclosureListing.case_number).ilike(q)
             | col(ForeclosureListing.parcel_id).ilike(q)
             | col(ForeclosureListing.neighborhood).ilike(q)
+            | col(ForeclosureListing.city).ilike(q)
             | col(ForeclosureListing.zip_code).ilike(q)
             | col(ForeclosureListing.notes).ilike(q)
         )
@@ -176,9 +181,22 @@ def list_foreclosures(
 
 
 @app.get("/api/stats")
-def get_dashboard_stats(session: Session = Depends(get_session)):
-    items = session.exec(select(ForeclosureListing)).all()
-    zips = session.exec(select(ZipTrend).order_by(ZipTrend.zip_code)).all()
+def get_dashboard_stats(
+    county: Optional[str] = None,
+    session: Session = Depends(get_session),
+):
+    all_items = session.exec(select(ForeclosureListing)).all()
+    duval_count = sum(1 for i in all_items if (i.county or "Duval") == "Duval")
+    st_johns_count = sum(1 for i in all_items if i.county == "St. Johns")
+
+    if county and county.lower() != "all":
+        items = [i for i in all_items if (i.county or "Duval") == county]
+        zips = session.exec(
+            select(ZipTrend).where(ZipTrend.county == county).order_by(ZipTrend.zip_code)
+        ).all()
+    else:
+        items = all_items
+        zips = session.exec(select(ZipTrend).order_by(ZipTrend.zip_code)).all()
 
     total = len(items)
     high_equity = sum(1 for i in items if i.estimated_equity_pct >= 30.0)
@@ -197,6 +215,9 @@ def get_dashboard_stats(session: Session = Depends(get_session)):
 
     return {
         "total_listings": total,
+        "all_counties_total": len(all_items),
+        "duval_count": duval_count,
+        "st_johns_count": st_johns_count,
         "high_equity_count": high_equity,
         "starred_count": starred,
         "foreclosure_count": foreclosures,
@@ -210,10 +231,14 @@ def get_dashboard_stats(session: Session = Depends(get_session)):
 
 
 @app.get("/api/zips")
-def list_zip_trends(session: Session = Depends(get_session)):
-    zips = session.exec(
-        select(ZipTrend).order_by(col(ZipTrend.yoy_appreciation_pct).desc())
-    ).all()
+def list_zip_trends(
+    county: Optional[str] = None,
+    session: Session = Depends(get_session),
+):
+    stmt = select(ZipTrend).order_by(col(ZipTrend.yoy_appreciation_pct).desc())
+    if county and county.lower() != "all":
+        stmt = stmt.where(ZipTrend.county == county)
+    zips = session.exec(stmt).all()
     return {"items": [z.model_dump() for z in zips]}
 
 
@@ -299,7 +324,6 @@ async def import_csv_or_json(
                 content = await upload.read()
         except Exception:
             raw = await request.body()
-            # Fallback boundary extraction if python-multipart is absent locally
             parts = raw.split(b"\r\n\r\n", 1)
             if len(parts) == 2:
                 content = parts[1].rsplit(b"\r\n--", 1)[0]
@@ -322,6 +346,7 @@ def export_listings_csv(session: Session = Depends(get_session)):
     ).all()
     buffer = io.StringIO()
     fields = [
+        "county",
         "case_number",
         "parcel_id",
         "listing_type",
@@ -361,5 +386,5 @@ def export_listings_csv(session: Session = Depends(get_session)):
     return StreamingResponse(
         iter([buffer.getvalue()]),
         media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=duval_foreclosures_export.csv"},
+        headers={"Content-Disposition": "attachment; filename=nefl_foreclosures_export.csv"},
     )
