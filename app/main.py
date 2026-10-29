@@ -51,7 +51,13 @@ app = FastAPI(
     openapi_url=None if settings.auth_enabled else "/openapi.json",
 )
 
-PUBLIC_PATHS = {"/login", "/api/auth/login", "/api/auth/logout", "/api/health"}
+PUBLIC_PATHS = {
+    "/login",
+    "/api/auth/login",
+    "/api/auth/logout",
+    "/api/auth/verify",
+    "/api/health",
+}
 
 
 @app.middleware("http")
@@ -147,9 +153,43 @@ def _serialize_listing(
     return data
 
 
+@app.get("/api/auth/verify")
+def verify_forward_auth(request: Request):
+    """Traefik ForwardAuth endpoint protecting all *.apps.predaccure.com applications."""
+    fwd_uri = request.headers.get("x-forwarded-uri", "/")
+    fwd_host = request.headers.get("x-forwarded-host", request.headers.get("host", ""))
+    fwd_proto = request.headers.get("x-forwarded-proto", "http")
+
+    # Always allow login routes, healthchecks, and Let's Encrypt ACME challenges
+    if (
+        fwd_uri.startswith("/login")
+        or fwd_uri.startswith("/api/auth/")
+        or fwd_uri.startswith("/api/health")
+        or fwd_uri.startswith("/healthz")
+        or fwd_uri.startswith("/.well-known/")
+    ):
+        return {"status": "allowed"}
+
+    if is_request_authenticated(request):
+        return {"status": "authenticated"}
+
+    accept = request.headers.get("accept", "")
+    if fwd_uri.startswith("/api/") or "application/json" in accept:
+        return JSONResponse(
+            status_code=401,
+            content={"detail": "Authentication required. Please sign in."},
+        )
+
+    target_url = f"{fwd_proto}://{fwd_host}{fwd_uri}" if fwd_host else "/"
+    login_url = f"https://realestatedeals.apps.predaccure.com/login?rd={quote_plus(target_url)}"
+    return RedirectResponse(url=login_url, status_code=302)
+
+
 @app.get("/login", response_class=HTMLResponse)
-def login_page(request: Request):
+def login_page(request: Request, rd: Optional[str] = None):
     if not settings.auth_enabled or is_request_authenticated(request):
+        if rd and (rd.startswith("/") or ".apps.predaccure.com" in rd):
+            return RedirectResponse(url=rd, status_code=302)
         return RedirectResponse(url="/", status_code=303)
     return templates.TemplateResponse(
         request=request,
@@ -176,24 +216,27 @@ def login_submit(payload: LoginPayload, request: Request, response: Response):
 
     clear_failed_attempts(client_ip)
     token = create_session_token()
-    is_https = (
-        request.url.scheme == "https"
-        or request.headers.get("x-forwarded-proto", "").lower() == "https"
-    )
+    host = request.headers.get("host", "").split(":")[0].lower()
+    cookie_domain = ".apps.predaccure.com" if host.endswith(".apps.predaccure.com") else None
+
     response.set_cookie(
         key=SESSION_COOKIE_NAME,
         value=token,
         max_age=settings.session_max_age_seconds,
         httponly=True,
         samesite="lax",
-        secure=is_https,
+        secure=False,
+        domain=cookie_domain,
         path="/",
     )
     return {"status": "authenticated"}
 
 
 @app.post("/api/auth/logout")
-def logout_submit(response: Response):
+def logout_submit(request: Request, response: Response):
+    host = request.headers.get("host", "").split(":")[0].lower()
+    cookie_domain = ".apps.predaccure.com" if host.endswith(".apps.predaccure.com") else None
+    response.delete_cookie(key=SESSION_COOKIE_NAME, domain=cookie_domain, path="/")
     response.delete_cookie(key=SESSION_COOKIE_NAME, path="/")
     return {"status": "logged_out"}
 

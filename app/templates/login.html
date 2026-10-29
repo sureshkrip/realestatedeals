@@ -3,18 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sign In &bull; {{ app_name }}</title>
+  <title>Unified SSO Gate &bull; apps.predaccure.com</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="h-full flex items-center justify-center p-4 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
   <div class="w-full max-w-md bg-slate-900/90 border border-slate-800 rounded-2xl p-8 shadow-2xl backdrop-blur">
     <div class="flex items-center gap-3 mb-6">
       <div class="h-12 w-12 rounded-xl bg-emerald-500/15 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold text-xl shadow-inner">
-        FL
+        SSO
       </div>
       <div>
-        <h1 class="text-lg font-bold text-white tracking-tight">NE Florida Deal Desk</h1>
-        <p class="text-xs text-slate-400">Duval &amp; St. Johns Foreclosure &amp; Tax Deed Finder</p>
+        <h1 class="text-lg font-bold text-white tracking-tight">Predaccure Apps Security Gate</h1>
+        <p id="target-subtitle" class="text-xs text-slate-400">Unified Single Sign-On &bull; *.apps.predaccure.com</p>
       </div>
     </div>
 
@@ -42,12 +42,12 @@
         type="submit"
         class="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-lg transition"
       >
-        Unlock Deal Desk &rarr;
+        Unlock Application &rarr;
       </button>
     </form>
 
     <div class="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-500">
-      <span>Protected by HMAC-SHA256 Session Gate</span>
+      <span>Protected by HMAC-SHA256 SSO</span>
       <span>Brute-Force Rate Limited</span>
     </div>
   </div>
@@ -56,6 +56,22 @@
     const form = document.getElementById('login-form');
     const errorBox = document.getElementById('error-box');
     const submitBtn = document.getElementById('submit-btn');
+    const subtitle = document.getElementById('target-subtitle');
+
+    const params = new URLSearchParams(window.location.search);
+    const rawRd = params.get('rd') || '/';
+    let safeRedirect = '/';
+    try {
+      if (rawRd.startsWith('/')) {
+        safeRedirect = rawRd;
+      } else {
+        const u = new URL(rawRd);
+        if (u.hostname.endsWith('.apps.predaccure.com')) {
+          safeRedirect = u.toString();
+          subtitle.textContent = 'Unlocking ' + u.hostname;
+        }
+      }
+    } catch (_) {}
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -72,7 +88,7 @@
         });
         const data = await res.json();
         if (res.ok) {
-          window.location.href = '/';
+          window.location.href = safeRedirect;
         } else {
           errorBox.textContent = data.detail || 'Invalid passcode.';
           errorBox.classList.remove('hidden');
@@ -82,7 +98,7 @@
         errorBox.classList.remove('hidden');
       } finally {
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Unlock Deal Desk →';
+        submitBtn.textContent = 'Unlock Application →';
       }
     });
   </script>
