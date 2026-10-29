@@ -153,12 +153,21 @@ def _serialize_listing(
     return data
 
 
+HTTPS_HOSTS = {
+    "realestatedeals.apps.predaccure.com",
+    "idearadar.apps.predaccure.com",
+    "wger.apps.predaccure.com",
+}
+
+
 @app.get("/api/auth/verify")
 def verify_forward_auth(request: Request):
     """Traefik ForwardAuth endpoint protecting all *.apps.predaccure.com applications."""
     fwd_uri = request.headers.get("x-forwarded-uri", "/")
-    fwd_host = request.headers.get("x-forwarded-host", request.headers.get("host", ""))
-    fwd_proto = request.headers.get("x-forwarded-proto", "http")
+    fwd_host = request.headers.get("x-forwarded-host", request.headers.get("host", "")).split(":")[0].lower()
+    fwd_proto = request.headers.get("x-forwarded-proto", "http").lower()
+    if fwd_host in HTTPS_HOSTS:
+        fwd_proto = "https"
 
     # Always allow login routes, healthchecks, ping, and Let's Encrypt ACME challenges
     if (
@@ -188,9 +197,7 @@ def verify_forward_auth(request: Request):
 
 @app.get("/login", response_class=HTMLResponse)
 def login_page(request: Request, rd: Optional[str] = None):
-    if not settings.auth_enabled or is_request_authenticated(request):
-        if rd and (rd.startswith("/") or ".apps.predaccure.com" in rd):
-            return RedirectResponse(url=rd, status_code=302)
+    if not settings.auth_enabled:
         return RedirectResponse(url="/", status_code=303)
     return templates.TemplateResponse(
         request=request,

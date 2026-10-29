@@ -8,7 +8,7 @@ from typing import Dict, List
 from fastapi import Request
 from app.config import settings
 
-SESSION_COOKIE_NAME = "nefl_deals_session"
+SESSION_COOKIE_NAME = "predaccure_sso_session"
 MAX_LOGIN_ATTEMPTS = 5
 LOCKOUT_WINDOW_SECONDS = 900  # 15 minutes
 
