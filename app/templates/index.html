@@ -171,6 +171,16 @@
         >
           Export CSV
         </a>
+
+        {% if auth_enabled %}
+        <button
+          @click="logout()"
+          class="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 transition"
+          title="Lock Deal Desk"
+        >
+          Lock
+        </button>
+        {% endif %}
       </div>
     </div>
   </header>
@@ -1303,6 +1313,11 @@
           setTimeout(() => {
             if (this.toastMessage === msg) this.toastMessage = '';
           }, 4000);
+        },
+
+        async logout() {
+          await fetch('/api/auth/logout', { method: 'POST' });
+          window.location.href = '/login';
         },
       };
     }

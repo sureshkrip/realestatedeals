@@ -6,8 +6,8 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 from urllib.parse import quote_plus
 
-from fastapi import Depends, FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi import Depends, FastAPI, HTTPException, Request, Response
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from sqlmodel import Session, col, select
@@ -15,11 +15,22 @@ from sqlmodel import Session, col, select
 from app.config import settings
 from app.database import engine, get_session, init_db
 from app.models import ForeclosureListing, ZipTrend, utc_now
+from app.security import (
+    SESSION_COOKIE_NAME,
+    clear_failed_attempts,
+    create_session_token,
+    get_client_ip,
+    is_rate_limited,
+    is_request_authenticated,
+    record_failed_attempt,
+    verify_pin,
+)
 from app.services.ingester import import_file_bytes, sync_duval_feed, upsert_records
 from app.services.seed import seed_database
 
 BASE_DIR = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
+MAX_UPLOAD_BYTES = 5 * 1024 * 1024  # 5 MB max file upload
 
 
 @asynccontextmanager
@@ -33,9 +44,52 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title=settings.app_name,
-    version="1.1.0",
+    version="1.2.0",
     lifespan=lifespan,
+    docs_url=None if settings.auth_enabled else "/docs",
+    redoc_url=None if settings.auth_enabled else "/redoc",
+    openapi_url=None if settings.auth_enabled else "/openapi.json",
 )
+
+PUBLIC_PATHS = {"/login", "/api/auth/login", "/api/auth/logout", "/api/health"}
+
+
+@app.middleware("http")
+async def security_and_auth_middleware(request: Request, call_next):
+    path = request.url.path
+
+    if settings.auth_enabled and path not in PUBLIC_PATHS:
+        if not is_request_authenticated(request):
+            if path.startswith("/api/"):
+                response = JSONResponse(
+                    status_code=401,
+                    content={"detail": "Authentication required. Please sign in."},
+                )
+            else:
+                response = RedirectResponse(url="/login", status_code=303)
+            _attach_security_headers(request, response)
+            return response
+
+    response = await call_next(request)
+    _attach_security_headers(request, response)
+    return response
+
+
+def _attach_security_headers(request: Request, response: Response) -> None:
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+    is_https = (
+        request.url.scheme == "https"
+        or request.headers.get("x-forwarded-proto", "").lower() == "https"
+    )
+    if is_https:
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+
+
+class LoginPayload(BaseModel):
+    pin: str
 
 
 class ListingUpdatePayload(BaseModel):
@@ -93,12 +147,66 @@ def _serialize_listing(
     return data
 
 
+@app.get("/login", response_class=HTMLResponse)
+def login_page(request: Request):
+    if not settings.auth_enabled or is_request_authenticated(request):
+        return RedirectResponse(url="/", status_code=303)
+    return templates.TemplateResponse(
+        request=request,
+        name="login.html",
+        context={"app_name": settings.app_name},
+    )
+
+
+@app.post("/api/auth/login")
+def login_submit(payload: LoginPayload, request: Request, response: Response):
+    client_ip = get_client_ip(request)
+    if is_rate_limited(client_ip):
+        raise HTTPException(
+            status_code=429,
+            detail="Too many failed login attempts. Try again in 15 minutes.",
+        )
+
+    if not verify_pin(payload.pin):
+        remaining = record_failed_attempt(client_ip)
+        raise HTTPException(
+            status_code=401,
+            detail=f"Invalid passcode ({remaining} attempt{'s' if remaining != 1 else ''} remaining).",
+        )
+
+    clear_failed_attempts(client_ip)
+    token = create_session_token()
+    is_https = (
+        request.url.scheme == "https"
+        or request.headers.get("x-forwarded-proto", "").lower() == "https"
+    )
+    response.set_cookie(
+        key=SESSION_COOKIE_NAME,
+        value=token,
+        max_age=settings.session_max_age_seconds,
+        httponly=True,
+        samesite="lax",
+        secure=is_https,
+        path="/",
+    )
+    return {"status": "authenticated"}
+
+
+@app.post("/api/auth/logout")
+def logout_submit(response: Response):
+    response.delete_cookie(key=SESSION_COOKIE_NAME, path="/")
+    return {"status": "logged_out"}
+
+
 @app.get("/", response_class=HTMLResponse)
 def dashboard(request: Request):
     return templates.TemplateResponse(
         request=request,
         name="index.html",
-        context={"app_name": settings.app_name},
+        context={
+            "app_name": settings.app_name,
+            "auth_enabled": settings.auth_enabled,
+        },
     )
 
 
@@ -109,6 +217,7 @@ def health_check(session: Session = Depends(get_session)):
         "status": "healthy",
         "app": settings.app_name,
         "listings_count": count,
+        "auth_enabled": settings.auth_enabled,
         "database_driver": settings.sqlalchemy_database_url.split("://")[0],
     }
 
@@ -305,6 +414,10 @@ def trigger_duval_sync(session: Session = Depends(get_session)):
 async def import_csv_or_json(
     request: Request, session: Session = Depends(get_session)
 ):
+    content_length = request.headers.get("content-length")
+    if content_length and int(content_length) > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="Upload exceeds 5 MB limit")
+
     content_type = request.headers.get("content-type", "")
     filename = request.headers.get("x-filename", "upload.csv")
     content = b""
@@ -333,6 +446,8 @@ async def import_csv_or_json(
     else:
         content = await request.body()
 
+    if len(content) > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="Upload exceeds 5 MB limit")
     if not content:
         raise HTTPException(status_code=400, detail="Uploaded file is empty")
     try:
