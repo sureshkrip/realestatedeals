@@ -160,12 +160,13 @@ def verify_forward_auth(request: Request):
     fwd_host = request.headers.get("x-forwarded-host", request.headers.get("host", ""))
     fwd_proto = request.headers.get("x-forwarded-proto", "http")
 
-    # Always allow login routes, healthchecks, and Let's Encrypt ACME challenges
+    # Always allow login routes, healthchecks, ping, and Let's Encrypt ACME challenges
     if (
         fwd_uri.startswith("/login")
         or fwd_uri.startswith("/api/auth/")
         or fwd_uri.startswith("/api/health")
         or fwd_uri.startswith("/healthz")
+        or fwd_uri.startswith("/ping")
         or fwd_uri.startswith("/.well-known/")
     ):
         return {"status": "allowed"}
